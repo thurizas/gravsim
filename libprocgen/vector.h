@@ -3,16 +3,21 @@
 
 #include "procgen_priv.h"
 
+
 #include <array>
 #include <cstddef>
 #include <stdexcept>
+#include <cstdio>
 #include <iostream>
+#include <string>
+
 
 template <typename T, std::size_t N>
 class DLLExport vector
 {
 public:
   vector() { }
+  vector(int val) : m_size(N) { for (int n = 0; n < m_size; n++) m_coords[n] = (T)val; }
   vector(const vector& other) 
   {
     this->m_size = other.m_size;
@@ -115,7 +120,6 @@ public:
     return retVec;
   }
 
-
   T dot(const vector& other) 
   {
     T retVal = 0;
@@ -134,7 +138,9 @@ public:
 
     return retVal;
   }
+
   vector cross(const vector&) {}
+  
   void normalize();
 
   double len() 
@@ -164,7 +170,31 @@ public:
     }
   }
 
-  
+  // f:  conversion factor to convert units to AU
+  std::string toString(double f = 1.0f)
+  {
+    std::string    ret("[");
+
+    for (size_t ndx = 0; ndx < m_size - 1; ndx++)
+    {
+      ret += std::to_string(m_coords[ndx] / f) + ", ";
+    }
+
+    ret += std::to_string(m_coords[m_size - 1] / f) + "]";
+
+    return ret;
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const vector<T, N>& other)
+  {
+    vector<T, N> vec = const_cast<vector<T, N>&>(other);
+    os << "[";
+    for (uint32_t ndx = 0; ndx < vec.size(); ndx++)
+      os << vec.coord(ndx) <<", ";
+    os << "]";
+
+    return os;
+  }
 
 private:
   std::size_t m_size = N;

@@ -145,8 +145,10 @@
   <ItemGroup>
     <ClInclude Include="console.h" />
     <ClInclude Include="logger.h" />
+    <ClInclude Include="matrix.h" />
     <ClInclude Include="procgen.h" />
     <ClInclude Include="procgen_priv.h" />
+    <ClInclude Include="shiftBuf.h" />
     <ClInclude Include="vector.h" />
     <ClInclude Include="XGetopt.h" />
   </ItemGroup>
