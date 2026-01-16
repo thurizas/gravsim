@@ -1,5 +1,5 @@
 {
-   "cntObjects" : 4,
+   "cntObjects" : 5,
    "primary" : {
       "mass" :  1.0,
       "isl"  :  0.115,
@@ -42,6 +42,18 @@
 		"mass"           :   1.00 ,
 		"period"         : 365.25,
 		"obliquity"      :  23.44
+	   },
+	   {
+	    "name"           :"mars"   ,
+	    "semimajor"      :  1.52371034,
+		"eccentricity"   :  0.09339410,
+		"inclination"    :  1.84969142,
+		"L"              :   -4.55343205,
+		"argOfPeriapsis" :  -23.94362959,
+		"longAscNode"    :   49.55953891,
+		"mass"           :  0.1075,
+		"period"         :   686.98,
+		"obliquity"      : 25.19
 	   }
    ],
    "refs" : {

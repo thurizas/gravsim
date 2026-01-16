@@ -1,5 +1,5 @@
 {
-   "cntObjects" : 9,
+   "cntObjects" : 10,
    "primary" : {
       "mass" :  1.0,
       "isl"  :  0.115,
@@ -102,6 +102,18 @@
 		"mass"           : 17.2   ,
 		"period"         : 60190.03,
 		"obliquity"      : 28.32
+	   },
+	   {
+		 "name"          : "Halley's Comet",
+		 "semimajor"     : 17.943,
+		 "eccentricity"  : 0.96658,
+		 "inclination"   : 161.96,
+		 "L"             : 0.07323,
+		 "argOfPeriapsis": 112.05,
+		 "longAscNode"   : 59.396,
+		 "mass"          : 4.43722E-11,
+		 "period"        : 27284.175,
+		 "obliquity"     : 0.0
 	   }
    ],
    "refs" : {

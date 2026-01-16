@@ -20,10 +20,8 @@ int main(int argc, char** argv)
 
   allocConsole();
 
-  // context: start    : 2000
-  //          deltaT   : 24*3600 seconds
-  //          duration : 0.00273785078713210130047912388775 years (or ~1 day)
-  ctxT context{ 2000, 24 * 3600, 0.0027378508 };
+//              start-time, deltaT, duration, units, show orbits
+  ctxT context{ 0, 24 * 3600, 400, "days", true};
   
   while (-1 != (choice = getopt(argc, argv, "f:dhv")))
   {

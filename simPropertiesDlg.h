@@ -7,6 +7,7 @@
 
 class QLineEdit;
 class QComboBox;
+class QCheckBox;
 
 
 class simPropertiesDlg :public QDialog
@@ -17,21 +18,28 @@ public:
   simPropertiesDlg(pctxT pctx, QWidget* parent = nullptr);
 
   void getParams(pctxT pctx);
+  bool didFileNameChange() { return m_bNewFile; }
 
 private slots:
   void onOK();
   void onCancel();
+  void onChooseFile();
 
 private:
   void setupUI();
 
   ctxT*        m_pcontext;
 
-  QLineEdit*  m_edtStart;
-  QLineEdit*  m_edtDelta;
-  QLineEdit*  m_edtEnd;
-  QLineEdit*  m_edtFileName;
-  QComboBox*  m_cboUnits;
+  QLineEdit*   m_edtStart;
+  QLineEdit*   m_edtDelta;
+  QLineEdit*   m_edtEnd;
+  QLineEdit*   m_edtFileName;
+  QComboBox*   m_cboUnits;
+  QComboBox*   m_cboUnits2;
+  QCheckBox*   m_chkOrbits;
+  QPushButton* m_btnChoose;
+
+  bool         m_bNewFile = false;
 };
 
 #endif

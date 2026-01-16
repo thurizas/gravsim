@@ -18,6 +18,7 @@ public slots:
 
 signals:
   void tick(uint64_t);
+  void calcDone();
   void finished();
 
 private:

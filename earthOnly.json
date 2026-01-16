@@ -1,0 +1,28 @@
+{
+   "cntObjects" : 2,
+   "primary" : {
+      "mass" :  1.0,
+      "isl"  :  0.115,
+      "osl"  : 50.0
+   },
+   "planets" :
+   [
+	   {
+	    "name"           :"earth"  ,
+	    "semimajor"      :   1.00000261,
+		"eccentricity"   :   0.01671123,
+		"inclination"    :   0.000000,
+		"L"              : 100.46457166,
+		"argOfPeriapsis" : 102.94719,
+		"longAscNode"    : -11.26064,
+		"mass"           :   1.00 ,
+		"period"         : 365.25,
+		"obliquity"      :  23.44
+	   }
+   ],
+   "refs" : {
+      "ref1" : "https://ssd.jpl.nasa.gov/planets/approx_pos.html, table 1",
+      "ref2" : "earth data from: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html"
+   }
+}
+

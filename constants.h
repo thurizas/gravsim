@@ -11,9 +11,8 @@ const double PI = 3.14159265359;
 const double DEG2RAD = PI / 180.0f;       // 1 degree = 0.01745329252 radians
 const double EPSILON = 1E-6;              // sensitivity for numerical methods
 
-const double  AU = 1.495978707E8;         // 1AU is 1.495 x 10^8 km
-const double  AU2M = 1000 * AU;
-const double  M2AU = 1 / AU2M;            // conversion from meters to AU
+const double  AU = 1.495978707E11;        // 1AU is 1.495 x 10^11 m
+const double  AU2KM = AU/1000.0;
 
 const double SIDEREALDAY = 23.934469444;  // 1 Sidereal day is 23h 56m 4.09s
 const double DAY2SEC = 8.6164089984E4;    // 86,164 seconds per sidereal day
@@ -26,6 +25,8 @@ const double MSOL = 1.988400E30;          // mass of sun in kilograms
 
 const double REARTH = 6371;               // radius of the earth in kilometers
 const double MEARTH = 5.9722E24;          // mass of earth in kilograms
+
+const double SCALE = 100;                 // 1 AU = 100 pixels
 
 
 // see: https://ssd.jpl.nasa.gov/planets/approx_pos.html, table 1
