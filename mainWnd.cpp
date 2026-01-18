@@ -5,6 +5,7 @@
 #include "2DGraphicsView.h"
 #include "simWorker.h"
 #include "simPropertiesDlg.h"
+#include "simThread.h"
 #include "detailsDlg.h"
 
 #include "libprocgen\procgen.h"
@@ -36,6 +37,8 @@ mainWnd::mainWnd(pctxT context, QWidget* p) : QMainWindow(p), m_context(*context
   setupMenus();
 
   m_graphicsScene = new QGraphicsScene;
+
+  m_context.systemMutex = new QMutex;
 }
 
 
@@ -74,6 +77,7 @@ void mainWnd::readDataFile(std::string name)
     CLogger::getInstance()->outMsg(cmdLine, CLogger::level::WARNING, "file %s does not exist", name.c_str());
   }
 }
+
 
 
 void mainWnd::setupUI()
@@ -157,7 +161,7 @@ void mainWnd::setupActions()
   m_zoomFit->setStatusTip("fits the display to the window");
   connect(m_zoomFit, &QAction::triggered, this, &mainWnd::onViewZoomFit);
 
-  m_simConfig = new QAction("configurtion", this);
+  m_simConfig = new QAction("configuration", this);
   m_simConfig->setStatusTip("edit parametes used for simulation");
   connect(m_simConfig, &QAction::triggered, this, &mainWnd::onSimConfig);
 
@@ -236,6 +240,9 @@ void mainWnd::onSimConfig()
     {
       onReadSystem(&m_context.datafile);
     }
+
+    updateDisplay(0);
+    onViewCenter();
   }
 }
 
@@ -530,7 +537,7 @@ void mainWnd::onRunSimulation()
     
   m_graphicsview->setScene(m_graphicsScene);
 
-  updateDisplay();                                 // update display showing initial conditions
+  updateDisplay(0);                                // update display showing initial conditions
   onViewCenter();                                  // center display on origin
 
   // account for different units in duration  "seconds", "minutes", "hours", "days", "months(30 day)", "years"
@@ -543,80 +550,99 @@ void mainWnd::onRunSimulation()
   else if (units == "months(30 day)") factor = 30.0 * 86400.0;
   else factor = 365.25 * 86400;
   uint64_t maxSteps = ceil((m_context.duration * factor) / m_context.deltaT);
+
+  // start simulation thead here
+
+  simWorker* worker = new simWorker(&m_context, m_system);
+  QThread* simWorkerThread = new QThread();
+  worker->moveToThread(simWorkerThread);
+  connect(simWorkerThread, &QThread::started, worker, &simWorker::start);
+  connect(simWorkerThread, &QThread::finished, worker, &simWorker::deleteLater);
+  connect(simWorkerThread, &QThread::finished, worker, &QThread::deleteLater);
+  connect(worker, &simWorker::updateStatusBar, this, &mainWnd::updateStatusMsg);
+  connect(worker, &simWorker::updateGuiThread, this, &mainWnd::updateGuiThread);
+
+  simWorkerThread->start();
   
-  m_bRunning = true;
-  m_simPause->setEnabled(true);
+  ////worker->start();
   
-  while (m_bRunning)
-  {
-    while (!m_bPaused)
-    {
-      m_status->setText("Simulation Running");
-      for (int step = 0; step < maxSteps; step++)
-      {
-        // (1) calcuate net force on each object in the system, calculating the new position and velocity vectors
-        for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
-        {
-          vector<double_t, 3> netForce; netForce.coord(0.0, 0); netForce.coord(0.0, 1); netForce.coord(0.0, 2);
+  //m_bRunning = true;
+  //m_simPause->setEnabled(true);
+  
+  //while (m_bRunning)
+  //{
+  //  // let event run at the top of the loop.....
+  //  QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
 
-          // iterate over objects array and calculate force on each object
-          for (uint32_t ndx = 0; ndx < m_system->cntObjects; ndx++)
-          {
-            //ndx - obj
-            if (obj == ndx) continue;                                                     // no force between object and itself...
+  //  while (!m_bPaused)
+  //  {
+  //    m_status->setText("Simulation Running");
+  //    for (int step = 0; step < maxSteps; step++)
+  //    {
+  //      // (1) calcuate net force on each object in the system, calculating the new position and velocity vectors
+  //      for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
+  //      {
+  //        vector<double_t, 3> netForce; netForce.coord(0.0, 0); netForce.coord(0.0, 1); netForce.coord(0.0, 2);
 
-            vector<double_t, 3> disp = m_system->objects.at(ndx)->curPos - m_system->objects.at(obj)->curPos;                          // units are AU
+  //        // iterate over objects array and calculate force on each object
+  //        for (uint32_t ndx = 0; ndx < m_system->cntObjects; ndx++)
+  //        {
+  //          //ndx - obj
+  //          if (obj == ndx) continue;                                                     // no force between object and itself...
 
-            double_t R = disp.len();
-            netForce = netForce + disp * ((G * m_system->objects.at(obj)->mass * m_system->objects.at(ndx)->mass) / (R * R * R));
-          }
-          netForce = netForce * (1 / (AU * AU));                                                                                        // units are m kg/sec^2
-          m_system->objects.at(obj)->netForce = netForce;
+  //          vector<double_t, 3> disp = m_system->objects.at(ndx)->curPos - m_system->objects.at(obj)->curPos;                          // units are AU
 
-          vector<double_t, 3> acc;
-          acc = netForce * (1 / (1000 * m_system->objects.at(obj)->mass));                                                              // units are km/sec^2
+  //          double_t R = disp.len();
+  //          netForce = netForce + disp * ((G * m_system->objects.at(obj)->mass * m_system->objects.at(ndx)->mass) / (R * R * R));
+  //        }
+  //        netForce = netForce * (1 / (AU * AU));                                                                                        // units are m kg/sec^2
+  //        m_system->objects.at(obj)->netForce = netForce;
 
-          // calculate the new velocity of the object v_{i+1} = v_{i} + a*dt
-          m_system->objects.at(obj)->newVel = m_system->objects.at(obj)->curVel + acc * (m_context.deltaT);                              // units are km/sec
+  //        vector<double_t, 3> acc;
+  //        acc = netForce * (1 / (1000 * m_system->objects.at(obj)->mass));                                                              // units are km/sec^2
 
-          // use updated velocity vector to calcualte new position vector. x_{i+1} = x_i + v_{i+1}*t 
-          m_system->objects.at(obj)->newPos = m_system->objects.at(obj)->curPos + m_system->objects.at(obj)->newVel * (1000 * m_context.deltaT / AU);
-        } // end object loop
+  //        // calculate the new velocity of the object v_{i+1} = v_{i} + a*dt
+  //        m_system->objects.at(obj)->newVel = m_system->objects.at(obj)->curVel + acc * (m_context.deltaT);                              // units are km/sec
 
-        // tabular display for debugging...
-        //printf("%4d;", step);
-        //for (uint32_t ndx = 1; ndx < m_system->cntObjects; ndx++)         // iterate over objects, skipping primary
-        //{
-        //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curPos.coord(0), m_system->objects.at(ndx)->curPos.coord(1));
-        //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curVel.coord(0), m_system->objects.at(ndx)->curVel.coord(1));
-        //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->netForce.coord(0), m_system->objects.at(ndx)->netForce.coord(1));
-        //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newPos.coord(0), m_system->objects.at(ndx)->newPos.coord(0));
-        //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newVel.coord(0), m_system->objects.at(ndx)->newVel.coord(0));
-        //}
-        //printf("\n");
-        // ... end tabular display
+  //        // use updated velocity vector to calcualte new position vector. x_{i+1} = x_i + v_{i+1}*t 
+  //        m_system->objects.at(obj)->newPos = m_system->objects.at(obj)->curPos + m_system->objects.at(obj)->newVel * (1000 * m_context.deltaT / AU);
+  //      } // end object loop
 
-        // (2) for all objects, update current vectors to the new ones.
-        for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
-        {
-          m_system->objects.at(obj)->curPos = m_system->objects.at(obj)->newPos;
-          m_system->objects.at(obj)->curVel = m_system->objects.at(obj)->newVel;
-        }
+  //      // tabular display for debugging...
+  //      //printf("%4d;", step);
+  //      //for (uint32_t ndx = 1; ndx < m_system->cntObjects; ndx++)         // iterate over objects, skipping primary
+  //      //{
+  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curPos.coord(0), m_system->objects.at(ndx)->curPos.coord(1));
+  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curVel.coord(0), m_system->objects.at(ndx)->curVel.coord(1));
+  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->netForce.coord(0), m_system->objects.at(ndx)->netForce.coord(1));
+  //      //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newPos.coord(0), m_system->objects.at(ndx)->newPos.coord(0));
+  //      //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newVel.coord(0), m_system->objects.at(ndx)->newVel.coord(0));
+  //      //}
+  //      //printf("\n");
+  //      // ... end tabular display
 
-        // (3) update scene with new positions
-        updateDisplay();
+  //      // (2) for all objects, update current vectors to the new ones.
+  //      for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
+  //      {
+  //        m_system->objects.at(obj)->curPos = m_system->objects.at(obj)->newPos;
+  //        m_system->objects.at(obj)->curVel = m_system->objects.at(obj)->newVel;
+  //      }
 
-        // (3) message pump run
-        updateStatusBar(step);
-        QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
-      }
-    } // closes while(!m_bPaused) loop....
-    // we get here only if the simulation is paused
-    QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
-  } // closes while(m_bRunning) loop....
+  //      // (3) update scene with new positions
+  //      updateDisplay();
+
+  //      // (3) message pump run
+  //      updateStatusBar(step);
+  //      QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
+  //      if (m_bPaused == true) break;                          // check for paused condition, break out of loop
+  //    } // closes for(step ...) loop ......
+  //  } // closes while(!m_bPaused) loop....
+  //  // we get here only if the simulation is paused
+  // // QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
+  //} // closes while(m_bRunning) loop....
 
 
-  m_status->setText("Simulation Finished");
+  //m_status->setText("Simulation Finished");
 }
 
 void mainWnd::onPauseSimulation()
@@ -644,9 +670,15 @@ void mainWnd::onStopSimulation()
   m_bPaused = false;
 }
 
-void mainWnd::updateStatusBar(uint64_t step)
+void mainWnd::updateStatusMsg(QString msg)
+{
+  m_status->setText(msg);
+}
+
+void mainWnd::updateGuiThread(uint64_t step, prenderInfoT pinfos)
 {
   double currTime = m_context.start + ((step * m_context.deltaT / 86400) / 365.25);
+  std::cerr << "time is: " << step << std::endl;
 
   if (m_time != nullptr)
   {
@@ -654,23 +686,27 @@ void mainWnd::updateStatusBar(uint64_t step)
     m_time->setText(msg);
   }
 
-  // only update the display every tenth iteration step -- ?? is this too frequently
-  //if(step % 10 == 0)
-  //  updateDisplay();
+  updateDisplay(pinfos);
 }
 
 
-void mainWnd::updateDisplay()
+void mainWnd::updateDisplay(prenderInfoT pinfo)
 {    
-  float maxX = m_system->primary.osl * SCALE;
-  float maxY = m_system->primary.osl * SCALE;
+  m_context.systemMutex->lock();
+  if (nullptr != pinfo)
+  {
+    std::cerr << "updating display for time: " << m_system->timeStep << "\n";  
+    for (uint32_t ndx = 0; ndx < m_system->cntObjects; ndx++)    
+    {
+      renderInfoT  obj = pinfo[ndx];
+      std::cerr << pinfo[ndx] << "\n";
+    }
+  }
 
-  // define colors for upto nine planets and primary
-  //                  primary                 grey;                   pale yellow/brown;      blue;                   red/orange;             bands of yellow; 
-  //QColor colors[] = { QColor(0xFF,0xFF,0x00), QColor(0x60,0x60,0x60), QColor(0xCC,0xCC,0x00), QColor(0x00,0x00,0xCC), QColor(0xFF,0xB2,0x66), QColor(0x60,0x60,0x60),
-    //                white;                  red;                    goldem/pale yellow;     cyan/blue;              deep blue
-   //                   QColor(0xFF,0xFF,0xFF), QColor(0xFF,0x00,0x00), QColor(0xFF,0xFF,0x99), QColor(0x00,0x80,0xFF), QColor(0x00,0x00,0x99) };
 
+    float maxX = m_system->primary.osl * SCALE;
+    float maxY = m_system->primary.osl * SCALE;
+  m_context.systemMutex->unlock();
 
   // define pens and brushes being used
   QPen  gridPen = QPen(Qt::black);
@@ -700,13 +736,16 @@ void mainWnd::updateDisplay()
         m_graphicsScene->addLine(maxX - len, ndx, maxX + len, ndx, gridPen);
       }
     }
+    first = false;
   }
  
+  
   if(nullptr != m_graphicsScene)
   {
     // to determine the size of the object, calculate the factor = floor(log(m_e)) where m_e is mass of object in earth mass units (range -2 to 5)
     // set the bounding box of object to be 6 +/- factor
     int ndx = 0;
+
     for (system::objectT* o : m_system->objects)
     {
       double_t factor = floor(log(o->mass / MEARTH) + 6);  
@@ -739,9 +778,8 @@ void mainWnd::updateDisplay()
 
       ndx++;
     }
-      
-    QCoreApplication::processEvents();
-  }
+    m_graphicsScene->update();}
+  
 }
 
 

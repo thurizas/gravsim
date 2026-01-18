@@ -23,7 +23,6 @@ public:
   ~mainWnd();
 
   void readDataFile(std::string);
-  //void getSystem(psystemT);
 
 public slots:
   void onExit();
@@ -40,7 +39,8 @@ public slots:
   void onPauseSimulation();
   void onResumeSimulation();
   void onStopSimulation();
-  void updateStatusBar(uint64_t); 
+  void updateGuiThread(uint64_t, prenderInfoT); 
+  void updateStatusMsg(QString);
   //void updateDetails();
 
 
@@ -48,7 +48,7 @@ private:
   void setupUI();
   void setupActions();
   void setupMenus();
-  void updateDisplay();
+  void updateDisplay(prenderInfoT);
   void cleanUpSystem();
 
   double_t solve2ellipticIntegral(double_t);

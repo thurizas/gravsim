@@ -17,13 +17,18 @@ public slots:
   void start();
 
 signals:
-  void tick(uint64_t);
-  void calcDone();
-  void finished();
+  void updateStatusBar(QString);
+  void updateGuiThread(uint64_t, prenderInfoT);
+
 
 private:
   ctxT          m_context;
   psystemT      m_system;
+
+  bool          m_bRunning = false;
+  bool          m_bPaused = false;
+
+  uint64_t      m_maxSteps;
 };
 
 #endif

@@ -33,3 +33,12 @@ std::ostream& operator<<(std::ostream& os, const struct system& s)
  
   return os;
 }
+
+std::ostream& operator<<(std::ostream& os, const struct renderInfo& s)
+{
+  os << "    [" << s.ndx << "]";
+  os << s.name.c_str();
+  os << ",mass:  " << s.mass;
+  os << ", position" << s.pos;
+  return os;
+}

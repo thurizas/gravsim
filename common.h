@@ -5,6 +5,7 @@
 #include "libprocgen/shiftBuf.h"
 
 #include <QColor>
+#include <QMutex>
 
 #include <string>
 #include <vector>
@@ -13,21 +14,40 @@
 static QColor colors[] = { QColor(0xFF,0xFF,0x00), QColor(0x60,0x60,0x60), QColor(0xCC,0xCC,0x00), QColor(0x00,0x00,0xCC), QColor(0xFF,0xB2,0x66), QColor(0xF0,0x03,0xFC),
                            QColor(0x03,0xFC,0xB3), QColor(0xFF,0x00,0x00), QColor(0xFF,0xFF,0x99), QColor(0x00,0x80,0xFF), QColor(0x00,0x00,0x99) };
 
-
+/**********************************************************************************************************************
+ * structure: ctx
+ * 
+ * abstract : contains the parameters that define the behavior of the simulation.  This structure is initialized in various 
+ *            places:
+ *             (1) it is instantiated in 'main' with the default values
+ *             (2) datafile and method _may_be set during processing of command line arguments
+ *             (3) systemMutex is instantiated during construction of mainWnd
+ *             (4) configuration can be view/modified in mainWnd::onSimConfig
+ *********************************************************************************************************************/
 typedef struct ctx
 {
-  double      start;          // date to start the simualtion at
-  double      deltaT;         // time step for integration, in seconds
-  double      duration;       // time to run simulation for
-  std::string durUnits;       // units for the duration
-  bool        showOrbits;     // flag to draw orbits or not.
-  uint8_t     method;         // method of getting system info
-  std::string datafile;       // file containing input data
+  double      start;          // date to start the simualtion at,         [default = 0]
+  double      deltaT;         // time step for integration, in seconds    [default = 86400]
+  double      duration;       // time to run simulation for               [default = 400]
+  std::string durUnits;       // units for the duration                   [default = "days"
+  bool        showOrbits;     // flag to draw orbits or not.              [default = true]
+  uint8_t     method;         // method of getting system info            [default = system::method::UNKNOWN]
+  std::string datafile;       // file containing input data               [default = ""]
+  QMutex*     systemMutex;    // mutex for controlling access to sim data [default = nullptr]
 } ctxT, *pctxT;
 
+
+/**********************************************************************************************************************
+ * structure: system
+ * 
+ * abstract : this contains all the information needed to perform the simulation of the planetary motion.  This data 
+ *            structure is shared beween the physics thread and the main GUI thread.  the mutex ctx.systemMutex is used
+ *            to control access between the two threads.  This structure is created and populated in either the function
+ *            onReadSystem or onGenSystem
+ *********************************************************************************************************************/
 typedef struct system
 {
-  enum method: std::uint8_t{ACCRETE=0, MANUAL=1};
+  enum method: std::uint8_t{UNKNOWN = 0, ACCRETE=1, MANUAL=2};
 
   typedef struct star
   {
@@ -59,6 +79,14 @@ typedef struct system
   friend std::ostream& operator<<(std::ostream&, const struct system&);
 } systemT, *psystemT;
 
+
+/**********************************************************************************************************************
+ * structure: _orbpro
+ * 
+ * abstract : contains the Keplerian properties of the orbit as well as other physical properties of the object, this
+ *            is instanticated at the same time as the objects are created (in onReadSystem or onGenSystem).  The 
+ *            orbital properties are used to help set the intial position and velocity vectorw.
+*/
 typedef struct _orbpro
 {
   double   a;             // semi-major axis, AU
@@ -75,6 +103,22 @@ typedef struct _orbpro
 
   friend std::ostream& operator<<(std::ostream&, const struct _orbpro&);
 } orbitalPropT, * porbitalPropT;
+
+/**********************************************************************************************************************
+ * structure: renderInfo
+ *
+ * abstract : contains the minimum about of informatin necessary to render the amimation.  These object are created in 
+ *            the render thread and comsumed in the GUI thread
+*/
+typedef struct renderInfo
+{
+  uint32_t     ndx;
+  std::string  name;
+  double_t     mass;
+  vector<double_t, 3> pos;
+
+  friend std::ostream& operator<<(std::ostream&, const struct renderInfo&);
+} renderInfoT, *prenderInfoT;
 
 
 

@@ -1,5 +1,6 @@
 #include "libprocgen\procgen.h"
 #include "constants.h"
+#include "common.h"
 #include "mainWnd.h"
 
 
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
   allocConsole();
 
 //              start-time, deltaT, duration, units, show orbits
-  ctxT context{ 0, 24 * 3600, 400, "days", true};
+  ctxT context{ 0, 24 * 3600, 400, "days", true, system::method::UNKNOWN, "", nullptr};
   
   while (-1 != (choice = getopt(argc, argv, "f:dhv")))
   {
@@ -30,6 +31,7 @@ int main(int argc, char** argv)
       case 'f':
         dataFileName = std::string(getOptArg());
         context.datafile = dataFileName;
+        context.method = system::method::MANUAL;
         break;
 
       case 'd':
