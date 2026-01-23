@@ -22,7 +22,9 @@ simWorker::simWorker(pctxT pcontext, psystemT psystem, QObject* p) : QObject(p),
   m_bRunning = true;
 }
 
-
+/*
+see https://www.youtube.com/watch?v=nCg3aXn5F3M for info on this method
+*/
 void simWorker::start()
 {
   // account for different units in duration  "seconds", "minutes", "hours", "days", "months(30 day)", "years"

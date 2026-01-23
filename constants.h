@@ -18,13 +18,19 @@ const double SIDEREALDAY = 23.934469444;  // 1 Sidereal day is 23h 56m 4.09s
 const double DAY2SEC = 8.6164089984E4;    // 86,164 seconds per sidereal day
 
 const double G = 6.67430E-11;             // G is 6.67430 x 10-11 Nm^2/Kg^2
-const double K = 0.01720209895;           // Gausian gravitational constant (units: L^{1.5}T^{-1}M^{-0.5}_
+const double K = 0.01720209895;           // Gausian gravitational constant (units: L^{1.5}T^{-1}M^{-0.5})
+const double sigma = 5.670374419E-8;      // Stefan-Boltzmann constant (units: W/m^2 K^4}
+const double c_vac = 299792458;           // speed of light in vacumn (units: m/sec)
+const double k_b = 1.380649E-23;          // boltzmann constant (units: J/K)
 
 const double RSOL = 6.96340E5;            // radius of the sun in kilometers
 const double MSOL = 1.988400E30;          // mass of sun in kilograms
+const double DSOL = 1408;                 // average density of sun in kg/m^3
+const double TSOL = 5772;                 // surface temperature of sun (units K)
 
 const double REARTH = 6371;               // radius of the earth in kilometers
 const double MEARTH = 5.9722E24;          // mass of earth in kilograms
+const double DEARTH = 5515;               // average density of earth in kg/m^3
 
 const double SCALE = 100;                 // 1 AU = 100 pixels
 

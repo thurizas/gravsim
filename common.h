@@ -26,14 +26,16 @@ static QColor colors[] = { QColor(0xFF,0xFF,0x00), QColor(0x60,0x60,0x60), QColo
  *********************************************************************************************************************/
 typedef struct ctx
 {
-  double      start;          // date to start the simualtion at,         [default = 0]
-  double      deltaT;         // time step for integration, in seconds    [default = 86400]
-  double      duration;       // time to run simulation for               [default = 400]
-  std::string durUnits;       // units for the duration                   [default = "days"
-  bool        showOrbits;     // flag to draw orbits or not.              [default = true]
-  uint8_t     method;         // method of getting system info            [default = system::method::UNKNOWN]
-  std::string datafile;       // file containing input data               [default = ""]
-  QMutex*     systemMutex;    // mutex for controlling access to sim data [default = nullptr]
+  double      start;           // date to start the simualtion at,         [default = 0]
+  double      deltaT;          // time step for integration, in seconds    [default = 86400]
+  double      duration;        // time to run simulation for               [default = 400]
+  std::string durUnits;        // units for the duration                   [default = "days"
+  bool        showOrbits;      // flag to draw orbits or not.              [default = true]
+  uint8_t     method;          // method of getting system info            [default = system::method::UNKNOWN]
+  uint8_t     earthLike;       // shooting of an earth-like planet         [default = system::earthlike::UNKNOWN]
+  std::string datafile;        // file containing input data               [default = ""]
+  std::string stellarDataFile; // file containing primary data             [default = ""]
+  QMutex*     systemMutex;     // mutex for controlling access to sim data [default = nullptr]
 } ctxT, *pctxT;
 
 
@@ -48,12 +50,19 @@ typedef struct ctx
 typedef struct system
 {
   enum method: std::uint8_t{UNKNOWN = 0, ACCRETE=1, MANUAL=2};
+  enum earthlike: std::uint8_t{INDETERMINATE = 0, NO=1, YES=2};
 
   typedef struct star
   {
-    double_t     mass;
-    double_t     isl;
-    double_t     osl;
+    bool         earthLike; // flag to force an earth-like environment
+    double_t     mass;      // mass in terms of sol masses
+    double_t     age;       // age in millions of year
+    double_t     maxage;    // max age in millions of years \tau_{ms} = 10^{10}(\frac{M}{M_sol})^{-2.5}
+    double_t     radius;    // radius in km
+    double_t     lumins;    // luminosity      
+    double_t     temp;      // temperature in kelvins
+    double_t     isl;       // inner system limit, AU
+    double_t     osl;       // outer system limit, AU
   } starT, *pstarT;
 
   typedef struct obj

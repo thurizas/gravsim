@@ -26,7 +26,8 @@ public:
 
 public slots:
   void onExit();
-
+  void onExportPrimary();
+  void onExportSystem();
   void onSimConfig();
   void onReadSystem(std::string* inFile = nullptr);
   void onGenSystem();
@@ -50,11 +51,20 @@ private:
   void setupMenus();
   void updateDisplay(prenderInfoT);
   void cleanUpSystem();
+  void clearOldData();
+
 
   double_t solve2ellipticIntegral(double_t);
-  void     clearOldData();
+
+  // functions to support accretion model
+  void getStellarFile();
+  bool readStellarFile();
+  void genPrimaryStar(bool sunlike = false);
+  void genProtoplanetaryDisk();
 
   QAction* m_fileExit;
+  QAction* m_fileExportPrimary;
+  QAction* m_fileExportSystem;
   QAction* m_viewSystem;
   QAction* m_viewCenter;
   QAction* m_zoomIn;

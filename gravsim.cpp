@@ -18,13 +18,14 @@ int main(int argc, char** argv)
   int32_t   choice = -1;
   int8_t    dbgLevel = CLogger::level::INFO;
   std::string dataFileName = "";
+  std::string stellarFileName = "";
 
   allocConsole();
 
-//              start-time, deltaT, duration, units, show orbits
-  ctxT context{ 0, 24 * 3600, 400, "days", true, system::method::UNKNOWN, "", nullptr};
+// default values for the context
+  ctxT context{ 0, 24 * 3600, 400, "days", true, system::method::UNKNOWN, system::earthlike::INDETERMINATE, "", "", nullptr};
   
-  while (-1 != (choice = getopt(argc, argv, "f:dhv")))
+  while (-1 != (choice = getopt(argc, argv, "f:S:dhv")))
   {
     switch (choice)
     {
@@ -32,6 +33,12 @@ int main(int argc, char** argv)
         dataFileName = std::string(getOptArg());
         context.datafile = dataFileName;
         context.method = system::method::MANUAL;
+        break;
+
+      case 'S':
+        stellarFileName = std::string(getOptArg());
+        context.stellarDataFile = stellarFileName;
+        context.method = system::method::ACCRETE;
         break;
 
       case 'd':
@@ -55,9 +62,6 @@ int main(int argc, char** argv)
   CLogger* pLogger = CLogger::getInstance();
   pLogger->regOutDevice(cmdLine, cmdColorOut);
   pLogger->outMsg(cmdLine, CLogger::level::SUCCESS, "logging engine successfully instantiated");
-
-
-
 
   QApplication theApp(argc, argv);
 
@@ -92,6 +96,11 @@ void showUsage(const char* name)
   std::cout << name << "an orbital simulator." << std::endl;
   std::cout << "usage: " << name << " [options] " << std::endl;
   std::cout << "\noptions: " << std::endl;
+
+  "f:S:dhv";
+  std::cout << "f f                   uses the file 'f' for full system data (primary & planet data)" << std::endl;
+  std::cout << "S f                   uses the file 'f' for information on the primary" << std::endl;
+  std::cout << "d                     increases the verbosity of logging messages, can by use multiple times" << std::endl;
   std::cout << "v                     prints program version and exits" << std::endl;
   std::cout << "h                     displays a synopsis of commands (this screen), and exits" << std::endl;
 }

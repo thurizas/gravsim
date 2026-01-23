@@ -1,0 +1,13 @@
+{
+  "primary": {
+    "earthLike" :  true,
+    "mass": 1.0,
+    "age": 4600,
+    "max-age": 10000,
+    "radius": 695700,
+    "lumin": 1,
+    "temp": 5500,
+    "isl": 0.115,
+    "osl": 50.0
+  }
+}

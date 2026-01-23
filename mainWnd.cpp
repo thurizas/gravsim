@@ -5,13 +5,15 @@
 #include "2DGraphicsView.h"
 #include "simWorker.h"
 #include "simPropertiesDlg.h"
-#include "simThread.h"
+//#include "simThread.h"
 #include "detailsDlg.h"
+#include "utility.h"
 
 #include "libprocgen\procgen.h"
 
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 #include <QApplication>
 #include <QMenuBar>
@@ -24,12 +26,23 @@
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QLabel>
 #include <QThread>
 #include <QMessageBox>
 #include <QPainterPath>
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 mainWnd::mainWnd(pctxT context, QWidget* p) : QMainWindow(p), m_context(*context)
 {
   setupUI();
@@ -41,7 +54,17 @@ mainWnd::mainWnd(pctxT context, QWidget* p) : QMainWindow(p), m_context(*context
   m_context.systemMutex = new QMutex;
 }
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 mainWnd:: ~mainWnd()
 {
 
@@ -79,7 +102,17 @@ void mainWnd::readDataFile(std::string name)
 }
 
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::setupUI()
 {
   QMenuBar* menubar;
@@ -128,13 +161,35 @@ void mainWnd::setupUI()
 }
 
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::setupActions()
 {
   m_fileExit = new QAction("e&Xit", this);
   m_fileExit->setShortcuts(QKeySequence::Quit);
   m_fileExit->setStatusTip("exits the application");
   connect(m_fileExit, &QAction::triggered, this, &mainWnd::onExit);
+
+  m_fileExportPrimary = new QAction("save primary", this);
+  //m_fileExportPrimary->setShortcuts();
+  m_fileExportPrimary->setStatusTip("export the primary star infomation");
+  m_fileExportPrimary->setEnabled(false);
+  connect(m_fileExportPrimary, &QAction::triggered, this, &mainWnd::onExportPrimary);
+
+  m_fileExportSystem = new QAction("save system", this);
+  //m_fileExportSystem->setShortcuts(QKeySequence();
+  m_fileExportSystem->setStatusTip("export the system desctiption in JSON or YAML");
+  m_fileExportSystem->setEnabled(false);
+  connect(m_fileExportSystem, &QAction::triggered, this, &mainWnd::onExportSystem);
 
   m_viewSystem = new QAction("view system", this);
   //m_viewSystem->setShortcuts()
@@ -192,9 +247,23 @@ void mainWnd::setupActions()
   connect(m_simStop, &QAction::triggered, this, &mainWnd::onStopSimulation);
 }
 
+
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::setupMenus()
 {
   QMenu* fileMenu = menuBar()->addMenu("&file");
+  fileMenu->addAction(m_fileExportPrimary);
+  fileMenu->addAction(m_fileExportSystem);
   fileMenu->addAction(m_fileExit);
 
   QMenu* viewMenu = menuBar()->addMenu("&view");
@@ -218,13 +287,118 @@ void mainWnd::setupMenus()
 }
 
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onExit()
 {
   QApplication::quit();
 }
 
 
-// configures the properties of the simulation
+/***********************************************************************************************************************
+ * Function: 
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber) 
+ **********************************************************************************************************************/
+void mainWnd::onExportPrimary()
+{
+  QString outName = "";
+
+  if (nullptr != m_system)
+  {
+    outName = QFileDialog::getSaveFileName(nullptr, "save primary data", QDir::currentPath(), "Json files (*.json);;Text files (*.txt *.dat)");
+
+    if (outName != "")
+    {
+      m_statusbar->showMessage(QString("saving primary data it %1").arg(outName.toStdString().c_str()), 500);
+
+
+      QFile outFile(outName);                  // have a file name, parse the file 
+
+      if (!outFile.open(QFile::ReadWrite | QFile::Truncate | QFile::Text))
+      {
+        CLogger::getInstance()->outMsg(cmdLine, CLogger::level::ERR, "failed to open file %s", m_dataFile.c_str());
+      }
+      else
+      {
+        QJsonParseError   err;
+
+        QJsonObject  rootObject;
+        QJsonObject  primaryObject;
+        primaryObject.insert("earthlike", m_system->primary.earthLike);
+        primaryObject.insert("mass", m_system->primary.mass);
+        primaryObject.insert("age", m_system->primary.age);
+        primaryObject.insert("max-age", m_system->primary.maxage);
+        primaryObject.insert("radius", m_system->primary.radius);
+        primaryObject.insert("lumin", m_system->primary.lumins);
+        primaryObject.insert("temp", m_system->primary.temp);
+        primaryObject.insert("isl", m_system->primary.isl);
+        primaryObject.insert("osl", m_system->primary.osl);
+
+        rootObject.insert("primary", primaryObject);
+
+        QJsonDocument jsonDoc(rootObject);
+
+        
+        QByteArray outData = jsonDoc.toJson();
+        outFile.write(outData);
+
+        outFile.close();
+      }
+    }
+    else
+    {
+      QMessageBox::information(nullptr, "Information", "operation canceled by user");
+    }
+  }
+  else
+  {
+    QMessageBox::warning(nullptr, "Missing Data", "No data to export found");
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::WARNING, "failed to export primary data - no data found");
+  }
+}
+/**********************************************************************************************************************
+* Function: 
+* 
+* Abstract:
+* 
+* Input   :
+* 
+* Returns :
+* 
+* Written : Jan 2026 (gkhuber)  
+**********************************************************************************************************************/
+void mainWnd::onExportSystem()
+{
+
+}
+
+/**********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onSimConfig()
 {
   uint32_t res = QDialog::Rejected;
@@ -247,7 +421,7 @@ void mainWnd::onSimConfig()
 }
 
 
-/**********************************************************************************************************************
+/***********************************************************************************************************************
  * Function: clearOldData
  *
  * Abstract:
@@ -257,7 +431,7 @@ void mainWnd::onSimConfig()
  * Returns :
  *
  * Written : Jan 2026 (gkhuber) 
- *********************************************************************************************************************/
+ **********************************************************************************************************************/
 void mainWnd::clearOldData()
 {
   if (!m_dataFile.empty())                 // if m_dataFile is not empty assume second time through this function
@@ -271,8 +445,22 @@ void mainWnd::clearOldData()
       m_system = nullptr;
     }
   }
+
+  m_fileExportPrimary->setEnabled(false);
+  m_fileExportSystem->setEnabled(false);
 }
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onViewSystem()
 {
   if (m_orbitalProperties.size() == 0)
@@ -288,7 +476,17 @@ void mainWnd::onViewSystem()
 
 }
 
-// generate a system from a data file
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Dec 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onReadSystem(std::string* inFile)
 {
   if (!m_cmdLineName.empty())                 //  case 1 : if m_cmdLineName is set use it
@@ -326,6 +524,13 @@ void mainWnd::onReadSystem(std::string* inFile)
     m_context.method = system::method::MANUAL;
     QFile inFile(m_dataFile.c_str());                  // have a file name, parse the file 
 
+    // prepare a new system structure
+    if (nullptr != m_system)
+    {
+      clearOldData();
+    }
+    m_system = new systemT{ system::method::MANUAL };
+
     if (!inFile.open(QFile::ReadOnly | QFile::Text))
     {
       CLogger::getInstance()->outMsg(cmdLine, CLogger::level::ERR, "failed to open file %s", m_dataFile.c_str());
@@ -345,7 +550,6 @@ void mainWnd::onReadSystem(std::string* inFile)
       {
         if (jsonDoc.isObject())
         {
-          m_system = new systemT{ 15 };
           QJsonObject jsonObj = jsonDoc.object();
 
           if (!jsonObj.isEmpty())
@@ -468,67 +672,465 @@ void mainWnd::onReadSystem(std::string* inFile)
 }
 
 
-// generate initial conditions for accrete to use
-void mainWnd::onGenSystem()
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
+void mainWnd::getStellarFile()
 {
-  // TODO : generate conditions for accretion disk (gas/dust amounts and distribution)
-  // TODO : generate random number of nucleii and set period to keplarian period, orbits can be highly eccentric and unstable
-  // TODO : configure struct star as appropriate
-  // TODO : generate system structure with initial nuclei, set time step to zero.
+  QString inFile = QFileDialog::getOpenFileName(this, "Select primary data file", QDir::currentPath(), "Json files (*.json);;Text files (*.txt *.dat)");
+  if (inFile != "")
+    m_context.stellarDataFile = inFile.toStdString();
+}
+
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
+bool mainWnd::readStellarFile()
+{
+  bool res = false;
+  m_statusbar->showMessage(QString("using primary data file %1").arg(m_context.stellarDataFile.c_str()), 500);
+  this->setWindowTitle(QString("Orbital Simulator - primary name %1").arg(m_context.stellarDataFile.c_str()));
+
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "reading primary file %s\n", m_context.stellarDataFile.c_str());
+
+  QFile inFile(m_context.stellarDataFile.c_str());                  // have a file name, parse the file 
+
+  if (!inFile.open(QFile::ReadOnly | QFile::Text))
+  {
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::ERR, "failed to open file %s", m_context.stellarDataFile.c_str());
+  }
+  else
+  {
+    QJsonParseError   err;
+    QTextStream in(&inFile);
+    QString jsonContents = in.readAll();
+    inFile.close();
+
+    QByteArray jsonBytes = jsonContents.toLocal8Bit();
+
+    auto jsonDoc = QJsonDocument::fromJson(jsonBytes, &err);
+
+    if (!jsonDoc.isNull())
+    {
+      if (jsonDoc.isObject())
+      {
+        m_system = new systemT{ 15 };
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (!jsonObj.isEmpty())
+        {
+          QVariantMap result = jsonObj.toVariantMap();
+
+          // get the primary properties.
+          m_system->primary.earthLike = result["primary"].toMap()["earthLike"].toBool();
+          m_system->primary.mass = result["primary"].toMap()["mass"].toDouble();
+          m_system->primary.age = result["primary"].toMap()["age"].toDouble();
+          m_system->primary.maxage = result["primary-age"].toMap()["max-age"].toDouble();
+          m_system->primary.radius = result["primary"].toMap()["radius"].toDouble();
+          m_system->primary.lumins = result["primary"].toMap()["lumin"].toDouble(); 
+          m_system->primary.temp = result["primary"].toMap()["temp"].toDouble();
+          m_system->primary.isl = result["primary"].toMap()["isl"].toDouble();
+          m_system->primary.osl = result["primary"].toMap()["osl"].toDouble();
+
+          res = true;
+        }
+        else
+        {
+              CLogger::getInstance()->outMsg(cmdLine, CLogger::level::WARNING, "JSON object is empty");
+        }
+      }       
+      else
+      {
+        CLogger::getInstance()->outMsg(cmdLine, CLogger::level::WARNING, "JSON does not represent an object");
+      }
+    }  
+    else
+    {
+      CLogger::getInstance()->outMsg(cmdLine, CLogger::level::WARNING, "failed to create JSON document");
+    }
+  }
+
+  return res;
+}
+
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ * 
+ * step 1 -- determine star classification. table of types (main sequence stars from https://www.youtube.com/watch?v=hG1of0MroM8
+ * 
+ *   class | frequence  |  mass        |range         |  color         | notes
+ *     O   |  0.00003   |  \ge 16      |    1 -    1  | 155, 176, 255  | slight underestimate of type O stars
+ *     B   |  0.13000   |  2.1 - 16    |    2 -   15  | 170, 191, 255  |
+ *     A   |  0.60000   |  1.40 - 2.10 |  16 -   76   | 202, 215, 255  |
+ *     F   |  3.00000   |  1.04 - 1.40 |  77 -  377   | 248, 247, 255  |
+ *     G   |  7.60000   |  0.80 - 1.04 |  378 - 1138  | 255, 244, 234  |
+ *     K   | 12.10000   |  0.45 - 0.80 | 1139 - 2349  | 255, 210, 161  |
+ *     M   | 76.45000   |  0.08 - 0.45 | 2350 - 9995  | 255, 204, 111  |
+ * 
+ * step 2 -- determine the star mass from above table, use a linear approximation to select from range
+ * 
+ * step 3 - generate max time on main-sequence, \tau_{ms} = 10^{10}(\frac{M}{M_sol})^{-2.5}
+ *
+ * step 3 -- generate radius, R = M^{0.5} is M \ge M_{sol} else R = M^{0.8} if M < M_{sol}
+ *
+ * step 4 - generate luminosity, 
+ *                  = 0.23(\frac{M}{M_sol})^{2.3}L_sol             if M < 0.43M_sol
+ *                  = (\frac{M}{M_sol})^4L_sol                     if 0.43M_sol < M < 2M_sol
+ *                L = 1.4(\frac{M}{M_sol})^{3.5}L_sol              if 2M_sol < M <55M_sol
+ *                  = 32000\frac{M}{M_sol}L_sol
+ * 
+ *               L = 4\pi\sigma\R^2T^4 = (\frac{M}{M_sol})^a * L_sol  (stephen-boltzmann formula)
+ *
+ * step 5 - calculate the effective temperature T = (L/R^2)^{0.25}
+ *  
+ * some represenative values:
+ * 
+ * stellar Mass, Msol      0.8 	     1.1        7.0        25.0          80.0
+ * max  age, Gyr          19.531     7.512      0.055       0.002         0.000
+ * radius, Rsol            0.837     1.056      3.032       6.264        12.155
+ * luminosity, Lsol        0.410     1.464   1270.490  109375.00    6411254.000
+ * density, Dsol           1.367     0.935      0.251       0.102         0.045
+ * temperature, K       5052.208  6183.337  19804.645   41970.469     83364.719
+ * isl, AU                 0.007     0.953      0.014       0.021         0.031    
+ * osl, AU                31.607    39.507    276.413     987.163      3158.769
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
+void mainWnd::genPrimaryStar(bool sunlike)
+{
+  typedef struct data
+  {
+    double_t   up_limit;
+    double_t   mass_min;
+    double_t   mass_max;
+    char       type;
+  }  dataT;
+
+  dataT val[7] = { {1,16,99,'O'}, {15,2.10,16,'B'}, {76,1.40,2.10,'A'},{377,1.04,1.40,'F'},
+                   {1138,0.80,1.04,'G'}, {2349,0.45,0.80,'K'}, {9995,0.08,0.80,'M'} };
+
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "generating a new primary star\n");
+  //  step 1 - determine mass
+  std::random_device              rd;
+  std::mt19937                    gen(rd());
+  std::uniform_int_distribution<> dist(1, 9995);
+  std::uniform_int_distribution<> dist1(1, 100);
+  
+  uint32_t ndx = 0;
+  if (sunlike)                                              // pick G (38%) or K (62%) to keep relative proportions constant
+  {
+    uint32_t roll = dist1(gen);
+
+    if (roll <= 38) ndx = 4;
+    else ndx = 5;
+  }
+  else
+  {
+    uint32_t roll = dist(gen);
+
+    for (; ndx < sizeof(val) / sizeof(val[0]); ndx++)
+    {
+      if (roll <= val[ndx].up_limit)
+      {
+        break;
+      }
+    }
+  }
+  m_system->primary.mass = val[ndx].mass_min + (val[ndx].mass_max - val[ndx].mass_min) * (static_cast<double_t>(dist1(gen)) / 100.0);
+
+  // step 2 - generate radius
+  m_system->primary.radius = calcRadius(m_system->primary.mass);
+
+  // step 3 - generate luminosity - relative to sol
+  m_system->primary.lumins = calcLum(m_system->primary.mass);
+
+  //step 4 - calculate the effective temperature T = (L / R ^ 2)^ { 0.25 }
+  m_system->primary.temp = calcTemp(m_system->primary.mass);
+
+  //step 5 - calculate the max age on the main sequence
+  m_system->primary.maxage = calcMAge(m_system->primary.mass)*1000;
+
+  //step 6 - calculate the system limits
+  m_system->primary.isl = calcISL(m_system->primary.mass);
+  m_system->primary.osl = calcOSL(m_system->primary.mass)/AU;
+
+  //step 7 - determine current age of the star
+  m_system->primary.age = (static_cast<double_t>(dist1(gen)) / 100.0) * m_system->primary.maxage;
+
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   mass of primary %.4f solar masses", m_system->primary.mass);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   radius of primary %.4f solar radius", m_system->primary.radius);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   luminosity of primary %.4f solar luminosity", m_system->primary.lumins);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   surface temperature %.4f", m_system->primary.temp);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   max age of primary %.4f GYr", m_system->primary.maxage / 1000);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   current age of primary %.4f GYr", m_system->primary.age / 1000);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   system limits [%.4f, %.4f]", m_system->primary.isl, m_system->primary.osl);
+
+  m_fileExportPrimary->setEnabled(true);
+ }
+
+
+/**********************************************************************************************************************
+ * Function: 
+ *
+ * Abstract: mass of the disk is 0.001 to 0.1 M_star, common estimate is 0.01 M_star. sample from normal distribution 
+             \mu = 0.01 \sigma = 1.0
+             divide disk into n - segments
+
+             \rho_1 = A\exp{-\alpha r^{1/n}}                              (Dole, 1969)
+
+             A = 1.5E-3 solar masses/a.u.^3
+             \alpha = 5
+             n = 3
+             K = 50
+
+             for exocone h(r) = x\tan(\theta)
+
+
+             V_{shell} = 2*f(x_i)(pi x_i^2 - pi x_{x-i}^2) = pi f(x_i)((x_i - x_{i-1})(x_i + x_{i-1})
+                       = 2 pi f(x_i) \frac{x_i + x_{i-1}}{2} (x_i - x_{i-1})
+                       = 2 pi f(x_i^*)x_i^* dx                                 x^* represent height at midpoint
+
+            V_{exocone} = 2\int_{r_0}^{r_1} (2 pi x f(x)) dx
+                        = 2\int_{r_0}^{r_1} 2 pi x x\tan(\theta) dx
+                        = 4 \tan(\theta) pi \int_{r_0}^{r_1} x^2 dx
+                        = \frac{4\tan(\theta) pi}{3} [x^3|_{r_0}^{r_1} =\frac{4\tan(\theta) pi}{3}(r_1^3 - r_0^3)
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber) 
+ *********************************************************************************************************************/
+void mainWnd::genProtoplanetaryDisk()
+{
+  double_t    volumnDisk;
+  double_t    dustMass;
+  double_t    dispAngle = 20.0 * DEG2RAD;
+
+  // (1) calculate volume of exocone, using shell method.
+  volumnDisk = ((4.0 * PI * tan(dispAngle))/3) * (pow(m_system->primary.osl, 3) - pow(m_system->primary.isl, 3));
+
+  // (2) calculate mass of dust in exocone sample from log-normal distribution with \mu = 0.01
+  // 0.001 to 0.1 M_star, common estimate is 0.01 M_star
+  double_t mu = 0.01;
+  double_t sigma = 0.05;
+  std::random_device   rd;
+  std::mt19937         mt(rd());
+  std::normal_distribution<double_t> ln(mu, sigma);
+
+  double_t val = ln(mt);
+  if (val < 0.001) val = 0.001;
+  if (val > 0.1) val = 0.1;
+  
+  dustMass = m_system->primary.mass * val;
+
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "disk volume : %.4f AU^3", volumnDisk);
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "dust mass in disk: %.4f solar unit", dustMass);
+  
+
 }
 
 
+
+/***********************************************************************************************************************
+ * Function: 
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber) 
+ **********************************************************************************************************************/
+void mainWnd::onGenSystem()
+{  
+  if(nullptr != m_system)
+  { 
+    clearOldData();
+  }
+
+  m_system = new systemT{ system::method::ACCRETE };
+
+  // (1) - generate the primary star
+  // check if user provided a star data file if so use it
+  if (m_context.stellarDataFile == "")
+  {
+    getStellarFile();
+  }
+
+   
+  if (m_context.stellarDataFile != "")             // if not star data file, ask for one
+  {
+    if (!readStellarFile())
+    {
+      CLogger::getInstance()->outMsg(cmdLine, CLogger::level::ERR, "failed to read primary data file.");
+      return;
+    }
+  }
+  else                                             // no data file given, generate a new star
+  {
+    if (m_context.earthLike == system::earthlike::INDETERMINATE)
+    {
+      int ret = QMessageBox::question(nullptr, "earth-like star", "generate an earth-like star?", QMessageBox::Yes, QMessageBox::No);
+      if (ret == QMessageBox::Yes)
+        m_context.earthLike = system::earthlike::YES;
+    }
+
+      genPrimaryStar(m_context.earthLike);
+  }
+
+  // (2) generate exocone properties (a) mass of disk, (b) density of dust/gas in terms of radii
+  //     mass of the disk is 0.001 to 0.1 M_star, common estimate is 0.01 M_star. sample from normal distribution \mu = 0.01 \sigma = 1.0
+  genProtoplanetaryDisk();
+
+  // (3) genrate protoplanet nucleii
+
+  // TODO : generate conditions for accretion disk (gas/dust amounts and distribution)
+  //        let a = semi-major axis (in AU), \Sigma(a) = surface density at a \Sigma_0 = normalization constant( ~4200 g/cm^3 (Weidenschilling), ~1700 g/cm^3 (Hayashi), or ~50500 g/cm^3 (Desch)
+  //            \beta ~= 1.5
+  //        \Sigma(a) = \Sigma_0(a/ 1 A)^{-\beta}
+  //      : ~60 M_earth of solids ~0.02 M_sol gasses (75% H_2, 25% He)
+  // TODO : generate random number of nucleii and set period to keplarian period, orbits can be highly eccentric and unstable mass ~0.1M_earth
+  
+  // TODO : set deltaT to 100000years
+  // TODO : set duration = 3000000years
+  // TODO : set maxStep = duration/deltaT
+  // TODO : do step = 0 to maxStep
+  // TODO :     CoreAccretion (planetessiamls sweep out annulus of ~hill radius)
+  // TODO :     GasAccretion   (like core accretion by happens when planets mass > critical mass)
+  // TODO :     PebbleAccretion (radially directed flux ~100M_earth/100Myr, small 1mm to 1cm tracked per annulii)
+  // TODO :     PlanetaryMigration
+  // TODO :     Collisions
+  // TODO :     Update
+  // TODO : loop
+}
+
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Dec 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onViewCenter() 
 {
   m_graphicsview->centerOn(m_center);
 }
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Dec 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onViewZoomIn() 
 {
   float_t factor = 2.0f;
   m_graphicsview->scale(factor, factor);
 }
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Dec 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onViewZoomOut() 
 {
   float_t factor = 0.5f;
   m_graphicsview->scale(factor, factor);
 }
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Dec 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onViewZoomFit() 
 {
   m_graphicsview->fitInView(QRect(-m_center.x(), -m_center.y(), 2 * m_center.x(), 2 * m_center.y()), Qt::KeepAspectRatio);
 }
 
-/*
-see https://www.youtube.com/watch?v=nCg3aXn5F3M for info on this method
-*/
-/*
-  states: stopped - simulation is not running
-          running - simulation is running
-          paused - simulation is running, but paused
-          finished - simulation has finished
-          configure - simulation parameters are being configured
 
-  transition funciton:
-
-               | start   | stop     | pause  | restart  | resume  | reset     |
-     ----------+---------+----------+--------+----------+---------+-----------+
-     stopped   | running | finished |   X    |   X      |   X     | configure |
-     running   |   X     |    X     | paused | running* |   X     |    X      |
-     paused    |   X     | finished |   X    |   X      | running | configure |
-     finished  |   X     |    X     |   X    |   X      |   X     |    X      |
-     configure |   X     |    X     |   X    | running  |   X     | running   |
-
-     * transitions to stopped state and then transitions to running state
-        
-*/
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ * 
+ * 
+ * states: stopped - simulation is not running
+ *         running - simulation is running
+ *         paused - simulation is running, but paused
+ *         finished - simulation has finished
+ *         configure - simulation parameters are being configured
+ *
+ * transition funciton:
+ *
+ *              | start   | stop     | pause  | restart  | resume  | reset     |
+ *    ----------+---------+----------+--------+----------+---------+-----------+
+ *    stopped   | running | finished |   X    |   X      |   X     | configure |
+ *    running   |   X     |    X     | paused | running* |   X     |    X      |
+ *    paused    |   X     | finished |   X    |   X      | running | configure |
+ *    finished  |   X     |    X     |   X    |   X      |   X     |    X      |
+ *    configure |   X     |    X     |   X    | running  |   X     | running   |
+ *
+ *    * transitions to stopped state and then transitions to running state
+ * 
+ * 
+ * 
+ * 
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onRunSimulation()
 {
-  
   if (m_dataFile.empty())
   {
     m_context.method = system::method::ACCRETE;
@@ -563,88 +1165,21 @@ void mainWnd::onRunSimulation()
   connect(worker, &simWorker::updateGuiThread, this, &mainWnd::updateGuiThread);
 
   simWorkerThread->start();
-  
-  ////worker->start();
-  
-  //m_bRunning = true;
-  //m_simPause->setEnabled(true);
-  
-  //while (m_bRunning)
-  //{
-  //  // let event run at the top of the loop.....
-  //  QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
 
-  //  while (!m_bPaused)
-  //  {
-  //    m_status->setText("Simulation Running");
-  //    for (int step = 0; step < maxSteps; step++)
-  //    {
-  //      // (1) calcuate net force on each object in the system, calculating the new position and velocity vectors
-  //      for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
-  //      {
-  //        vector<double_t, 3> netForce; netForce.coord(0.0, 0); netForce.coord(0.0, 1); netForce.coord(0.0, 2);
-
-  //        // iterate over objects array and calculate force on each object
-  //        for (uint32_t ndx = 0; ndx < m_system->cntObjects; ndx++)
-  //        {
-  //          //ndx - obj
-  //          if (obj == ndx) continue;                                                     // no force between object and itself...
-
-  //          vector<double_t, 3> disp = m_system->objects.at(ndx)->curPos - m_system->objects.at(obj)->curPos;                          // units are AU
-
-  //          double_t R = disp.len();
-  //          netForce = netForce + disp * ((G * m_system->objects.at(obj)->mass * m_system->objects.at(ndx)->mass) / (R * R * R));
-  //        }
-  //        netForce = netForce * (1 / (AU * AU));                                                                                        // units are m kg/sec^2
-  //        m_system->objects.at(obj)->netForce = netForce;
-
-  //        vector<double_t, 3> acc;
-  //        acc = netForce * (1 / (1000 * m_system->objects.at(obj)->mass));                                                              // units are km/sec^2
-
-  //        // calculate the new velocity of the object v_{i+1} = v_{i} + a*dt
-  //        m_system->objects.at(obj)->newVel = m_system->objects.at(obj)->curVel + acc * (m_context.deltaT);                              // units are km/sec
-
-  //        // use updated velocity vector to calcualte new position vector. x_{i+1} = x_i + v_{i+1}*t 
-  //        m_system->objects.at(obj)->newPos = m_system->objects.at(obj)->curPos + m_system->objects.at(obj)->newVel * (1000 * m_context.deltaT / AU);
-  //      } // end object loop
-
-  //      // tabular display for debugging...
-  //      //printf("%4d;", step);
-  //      //for (uint32_t ndx = 1; ndx < m_system->cntObjects; ndx++)         // iterate over objects, skipping primary
-  //      //{
-  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curPos.coord(0), m_system->objects.at(ndx)->curPos.coord(1));
-  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->curVel.coord(0), m_system->objects.at(ndx)->curVel.coord(1));
-  //      //  printf("%.4E, %.4E;\t", m_system->objects.at(ndx)->netForce.coord(0), m_system->objects.at(ndx)->netForce.coord(1));
-  //      //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newPos.coord(0), m_system->objects.at(ndx)->newPos.coord(0));
-  //      //  //printf("[%.4E, %.4E]\t", m_system->objects.at(ndx)->newVel.coord(0), m_system->objects.at(ndx)->newVel.coord(0));
-  //      //}
-  //      //printf("\n");
-  //      // ... end tabular display
-
-  //      // (2) for all objects, update current vectors to the new ones.
-  //      for (uint32_t obj = 0; obj < m_system->cntObjects; obj++)
-  //      {
-  //        m_system->objects.at(obj)->curPos = m_system->objects.at(obj)->newPos;
-  //        m_system->objects.at(obj)->curVel = m_system->objects.at(obj)->newVel;
-  //      }
-
-  //      // (3) update scene with new positions
-  //      updateDisplay();
-
-  //      // (3) message pump run
-  //      updateStatusBar(step);
-  //      QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
-  //      if (m_bPaused == true) break;                          // check for paused condition, break out of loop
-  //    } // closes for(step ...) loop ......
-  //  } // closes while(!m_bPaused) loop....
-  //  // we get here only if the simulation is paused
-  // // QApplication::processEvents(QEventLoop::AllEvents);    // let any pending event run
-  //} // closes while(m_bRunning) loop....
-
-
-  //m_status->setText("Simulation Finished");
 }
 
+
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onPauseSimulation()
 {
   m_bPaused = true;
@@ -653,6 +1188,17 @@ void mainWnd::onPauseSimulation()
   m_simResume->setEnabled(true);
 }
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onResumeSimulation()
 {
   m_bPaused = false;
@@ -661,6 +1207,17 @@ void mainWnd::onResumeSimulation()
   m_simResume->setEnabled(false);
 }
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::onStopSimulation()
 {
   m_status->setText("Simulation done");
@@ -670,11 +1227,33 @@ void mainWnd::onStopSimulation()
   m_bPaused = false;
 }
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::updateStatusMsg(QString msg)
 {
   m_status->setText(msg);
 }
 
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Jan 2026 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::updateGuiThread(uint64_t step, prenderInfoT pinfos)
 {
   double currTime = m_context.start + ((step * m_context.deltaT / 86400) / 365.25);
@@ -689,7 +1268,17 @@ void mainWnd::updateGuiThread(uint64_t step, prenderInfoT pinfos)
   updateDisplay(pinfos);
 }
 
-
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Nov 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::updateDisplay(prenderInfoT pinfo)
 {    
   m_context.systemMutex->lock();
@@ -826,7 +1415,17 @@ double_t mainWnd::solve2ellipticIntegral(double_t x)
   return sum;
 }
 
-// clears data about the system
+/***********************************************************************************************************************
+ * Function:
+ *
+ * Abstract:
+ *
+ * Input   :
+ *
+ * Returns :
+ *
+ * Written : Aug 2025 (gkhuber)
+ **********************************************************************************************************************/
 void mainWnd::cleanUpSystem()
 {
   if (m_system != nullptr)

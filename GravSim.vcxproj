@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="detailsDlg.h" />
+    <ClInclude Include="utility.h" />
     <QtMoc Include="2DGraphicsView.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="constants.h" />
@@ -31,6 +32,7 @@
   <ItemGroup>
     <None Include="earthOnly.json" />
     <None Include="innerPlanets.json" />
+    <None Include="sol.json" />
     <None Include="solarSystem.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
