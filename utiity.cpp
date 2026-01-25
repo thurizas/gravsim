@@ -8,8 +8,8 @@
 
 std::ostream& operator<<(std::ostream& os, const struct _orbpro& op)
 {
-  os << std::setw(10) << op.n << ",\t" << std::setprecision(6) << op.a << ",\t" << op.e << ",\t" << op.i << ",\t" <<
-                         op.L << ",\t" << op.w << ",\t" << op.W << ",\t" << op.m << ",\t" << op.t << ",\t" << op.o << std::endl;
+  os << std::setw(10) /* << op.n << ",\t" */<< std::setprecision(6) << op.a << ",\t" << op.e << ",\t" << op.i << ",\t" <<
+                         op.L << ",\t" << op.w << ",\t" << op.W << ",\t" /* << op.m*/ << ",\t" << op.t << ",\t" << op.o << std::endl;
 
 
   return os;

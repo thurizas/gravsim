@@ -30,14 +30,26 @@ private:
 
   ctxT*        m_pcontext;
 
-  QLineEdit*   m_edtStart;
-  QLineEdit*   m_edtDelta;
-  QLineEdit*   m_edtEnd;
-  QLineEdit*   m_edtFileName;
-  QComboBox*   m_cboUnits;
-  QComboBox*   m_cboUnits2;
-  QCheckBox*   m_chkOrbits;
-  QPushButton* m_btnChoose;
+  QLineEdit*   m_edtStart = nullptr;
+  QLineEdit*   m_edtDelta = nullptr;
+  QLineEdit*   m_edtEnd = nullptr;
+  QLineEdit*   m_edtFileName = nullptr;
+  QComboBox*   m_cboUnits = nullptr;
+  QComboBox*   m_cboUnits2 = nullptr;
+  QCheckBox*   m_chkOrbits = nullptr;
+  QPushButton* m_btnChoose = nullptr;
+
+  // accrete model variables
+  QLineEdit* m_edtDisp = nullptr;
+  QLineEdit* m_edtMinDiskMass = nullptr;
+  QLineEdit* m_edtAvgDiskMass = nullptr;
+  QLineEdit* m_edtMaxDiskMass = nullptr;
+  QLineEdit* m_edtGasDust = nullptr;
+  QLineEdit* m_edtCntBands = nullptr;
+  QLineEdit* m_edtCntNucleii = nullptr;
+  QLineEdit* m_edtInitialMass = nullptr;
+  QLineEdit* m_edtAlpha = nullptr;
+  QLineEdit* m_edtPowerExp = nullptr;
 
   bool         m_bNewFile = false;
 };

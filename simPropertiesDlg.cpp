@@ -39,6 +39,7 @@ void simPropertiesDlg::setupUI()
   btnLayout->addWidget(btnCancel);
 
   QFormLayout* formLayout = new QFormLayout;
+  QFormLayout* accreteFormLayout = new QFormLayout;
 
   m_edtStart = new QLineEdit;
   if (nullptr != m_pcontext) m_edtStart->setText(QString("%1").arg(m_pcontext->start));
@@ -67,7 +68,7 @@ void simPropertiesDlg::setupUI()
   }
 
   m_chkOrbits = new QCheckBox;
-  m_chkOrbits->setChecked(m_pcontext->showOrbits);
+  if(m_pcontext != nullptr) m_chkOrbits->setChecked(m_pcontext->showOrbits);
 
   row3layout->addWidget(m_edtEnd);
   row3layout->addWidget(m_cboUnits2);
@@ -87,10 +88,45 @@ void simPropertiesDlg::setupUI()
   formLayout->addRow("Simulation length (years): ", row3layout);
   formLayout->addRow("Show orbits              : ", m_chkOrbits);
   formLayout->addRow("Data file (if any)       : ", row4layout);
+
+  QFrame* line = new QFrame();
+  line->setFrameShape(QFrame::HLine);
+  line->setFrameShadow(QFrame::Sunken);
+  line->setStyleSheet("background-color: black;");
+
+  // setup properties for accretion model
+  m_edtDisp = new QLineEdit(); if (m_pcontext != nullptr) m_edtDisp->setText(QString("%1").arg(m_pcontext->accreteCtx.dispAngle));
+
+  QHBoxLayout* row5Layout = new QHBoxLayout;
+  m_edtMinDiskMass = new QLineEdit; if (m_pcontext != nullptr) m_edtMinDiskMass->setText(QString("%1").arg(m_pcontext->accreteCtx.minMass));
+  m_edtAvgDiskMass = new QLineEdit; if (m_pcontext != nullptr) m_edtAvgDiskMass->setText(QString("%1").arg(m_pcontext->accreteCtx.avgMass));
+  m_edtMaxDiskMass = new QLineEdit; if (m_pcontext != nullptr) m_edtMaxDiskMass->setText(QString("%1").arg(m_pcontext->accreteCtx.maxMass));
+  row5Layout->addWidget(m_edtMinDiskMass);
+  row5Layout->addWidget(m_edtAvgDiskMass);
+  row5Layout->addWidget(m_edtMaxDiskMass);
+
+  m_edtGasDust     = new QLineEdit(); if (m_pcontext != nullptr) m_edtGasDust->setText(QString("%1").arg(m_pcontext->accreteCtx.gasDustRatio));
+  m_edtCntBands    = new QLineEdit(); if (m_pcontext != nullptr) m_edtCntBands->setText(QString("%1").arg(m_pcontext->accreteCtx.cntBands));
+  m_edtCntNucleii  = new QLineEdit(); if (m_pcontext != nullptr) m_edtCntNucleii->setText(QString("%1").arg(m_pcontext->accreteCtx.cntNuclei));
+  m_edtInitialMass = new QLineEdit(); if (m_pcontext != nullptr) m_edtInitialMass->setText(QString("%1").arg(m_pcontext->accreteCtx.initialMass));
+  m_edtAlpha       = new QLineEdit(); if (m_pcontext != nullptr) m_edtAlpha->setText(QString("%1").arg(m_pcontext->accreteCtx.alpha));
+  m_edtPowerExp    = new QLineEdit(); if (m_pcontext != nullptr) m_edtPowerExp->setText(QString("%1").arg(m_pcontext->accreteCtx.n));
+
+  accreteFormLayout->addRow("dispersion angle (degrees)           :", m_edtDisp);
+  accreteFormLayout->addRow("disk mass (min/avg/mass)             :", row5Layout);
+  accreteFormLayout->addRow("gas to dust ratio                    :", m_edtGasDust);
+  accreteFormLayout->addRow("number of band disk partitioned into :", m_edtCntBands);
+  accreteFormLayout->addRow("number of initial nucleii present    :", m_edtCntNucleii);
+  accreteFormLayout->addRow("initial mass of nucleii (solar mass) :", m_edtInitialMass);
+  accreteFormLayout->addRow("alpha                                :", m_edtAlpha);
+  accreteFormLayout->addRow("inverse power law exponent (Dole's n):", m_edtPowerExp);
   
   QVBoxLayout*  mainLayout = new QVBoxLayout(this);
   mainLayout->addLayout(formLayout);
+  mainLayout->addWidget(line);
+  mainLayout->addLayout(accreteFormLayout);
   mainLayout->addLayout(btnLayout); 
+
 
   connect(btnOK, &QPushButton::clicked, this, &simPropertiesDlg::onOK);
   connect(btnCancel, &QPushButton::clicked, this, &simPropertiesDlg::onCancel);
@@ -126,6 +162,17 @@ void simPropertiesDlg::onOK()
   m_pcontext->durUnits = (qslUnits.at(m_cboUnits2->currentIndex()).toStdString());
   m_pcontext->datafile = (m_edtFileName->text()).toStdString();
   m_pcontext->showOrbits = m_chkOrbits->isChecked();
+
+  m_pcontext->accreteCtx.dispAngle = (m_edtDisp->text()).toDouble();
+  m_pcontext->accreteCtx.minMass = (m_edtMinDiskMass->text()).toDouble();
+  m_pcontext->accreteCtx.avgMass = (m_edtAvgDiskMass->text()).toDouble();
+  m_pcontext->accreteCtx.maxMass = (m_edtMaxDiskMass->text()).toDouble();
+  m_pcontext->accreteCtx.gasDustRatio = (m_edtGasDust->text()).toDouble();
+  m_pcontext->accreteCtx.cntBands = (m_edtCntBands->text()).toInt();
+  m_pcontext->accreteCtx.cntNuclei = (m_edtCntNucleii->text()).toInt();
+  m_pcontext->accreteCtx.initialMass = (m_edtInitialMass->text()).toDouble();
+  m_pcontext->accreteCtx.alpha = (m_edtAlpha->text()).toDouble();
+  m_pcontext->accreteCtx.n = (m_edtPowerExp->text()).toDouble();
 
   QDialog::accept();              // call base-class accept funtion
 }

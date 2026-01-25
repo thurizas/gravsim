@@ -8,11 +8,10 @@
 #include <QLabel>
 #include <QLineEdit>
 
-QStringList qslHeaders = {"name","semi-major axis, AU","mass, kg", "speed, km/s", "eccentricity", "inclination, deg", "RAAN, deg", "arg periapsis, deg", "color"};
+QStringList qslHeaders = {"name","semi-major axis, AU","mass, Earth masses", "speed, km/s", "eccentricity", "inclination, deg", "RAAN, deg", "arg periapsis, deg", "color"};
 
-detailsDlg::detailsDlg(std::vector<orbitalPropT> vec, psystemT sys, QWidget* p) : QDialog(p), m_parent(p)
+detailsDlg::detailsDlg(psystemT sys, QWidget* p) : QDialog(p), m_parent(p), m_system(sys)
 {
-  m_pProps = &vec;
   m_primary = sys->primary;
 
   setupUI();
@@ -62,23 +61,27 @@ void detailsDlg::setupUI()
 void detailsDlg::populateControls()
 {
   int row = 0;
-  if (m_pProps != nullptr)
+  if (m_system != nullptr)
   {
     m_edtPrimaryMass->setText(QString("%1").arg(m_primary.mass*MSOL));
     m_edtISL->setText(QString("%1").arg(m_primary.isl));
     m_edtOSL->setText(QString("%1").arg(m_primary.osl));
 
-    for (orbitalPropT prop : *m_pProps)
+    //for (orbitalPropT prop : *m_pProps)
+    //for(system::objectT obj : m_system->objects)
+    for(uint32_t ndx = 1; ndx < m_system->cntObjects; ndx++)
     {
+      system::objectT* obj = m_system->objects.at(ndx);
+
       m_tblDetails->insertRow(row);
-      m_tblDetails->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(prop.n)));
-      m_tblDetails->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(prop.a)));
-      m_tblDetails->setItem(row, 2, new QTableWidgetItem(QString("%1").arg(prop.m * MEARTH)));
-      m_tblDetails->setItem(row, 3, new QTableWidgetItem(QString("%1").arg(prop.s)));
-      m_tblDetails->setItem(row, 4, new QTableWidgetItem(QString("%1").arg(prop.e)));
-      m_tblDetails->setItem(row, 5, new QTableWidgetItem(QString("%1").arg(prop.i)));
-      m_tblDetails->setItem(row, 6, new QTableWidgetItem(QString("%1").arg(prop.W)));
-      m_tblDetails->setItem(row, 7, new QTableWidgetItem(QString("%1").arg(prop.w)));
+      m_tblDetails->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(obj->name.c_str())));
+      m_tblDetails->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(obj->orbProps.a)));
+      m_tblDetails->setItem(row, 2, new QTableWidgetItem(QString("%1").arg(obj->mass/MEARTH)));
+      m_tblDetails->setItem(row, 3, new QTableWidgetItem(QString("%1").arg(obj->orbProps.s)));
+      m_tblDetails->setItem(row, 4, new QTableWidgetItem(QString("%1").arg(obj->orbProps.e)));
+      m_tblDetails->setItem(row, 5, new QTableWidgetItem(QString("%1").arg(obj->orbProps.i)));
+      m_tblDetails->setItem(row, 6, new QTableWidgetItem(QString("%1").arg(obj->orbProps.W)));
+      m_tblDetails->setItem(row, 7, new QTableWidgetItem(QString("%1").arg(obj->orbProps.w)));
       QLabel* pLabel = new QLabel();
       pLabel->setText("not set");
       if (row+1 < 9)

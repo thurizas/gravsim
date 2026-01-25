@@ -14,6 +14,30 @@
 static QColor colors[] = { QColor(0xFF,0xFF,0x00), QColor(0x60,0x60,0x60), QColor(0xCC,0xCC,0x00), QColor(0x00,0x00,0xCC), QColor(0xFF,0xB2,0x66), QColor(0xF0,0x03,0xFC),
                            QColor(0x03,0xFC,0xB3), QColor(0xFF,0x00,0x00), QColor(0xFF,0xFF,0x99), QColor(0x00,0x80,0xFF), QColor(0x00,0x00,0x99) };
 
+/*********************************************************************************************************************
+ * structure: accrete_variables
+ *
+ * abstract : contains the paramterd necessary for the acrete simulation to work.  It is created in the main function
+ *            with the default values set.  It is modified in the following places:
+ *             (1) in the function mainWnd::onSimConfig
+ *            
+ *********************************************************************************************************************/
+typedef struct accrete_variables
+{
+  double_t     dispAngle;    // defines height of disk, degrees                   [default = 20.0 ]
+  double_t     minMass;      // define minimum mass of disk, percent solar mass   [default = 0.001]
+  double_t     avgMass;      // define average mass of disk, percent solar mass   [default = 0.01 ]
+  double_t     maxMass;      // define maximum mass of disk, percent solar maas   [default = 0.1  ]
+  double_t     gasDustRatio; // ratio of gas mass to dust mass                    [default = 50.0 ]
+  uint32_t     cntBands;     // number of 'bands' in disk                         [default = 30   ]
+  uint32_t     cntNuclei;    // number of planetary nuclei to start               [default = 20   ]
+  double_t     initialMass;  // initial mass of each planetary nuclei, solar mass [default = 10E-15]
+  double_t     alpha;        // [default = 5.0]
+  double_t     n;            // [default = 3.0]
+
+} accreteVars, *paccreteVars;
+
+
 /**********************************************************************************************************************
  * structure: ctx
  * 
@@ -36,7 +60,32 @@ typedef struct ctx
   std::string datafile;        // file containing input data               [default = ""]
   std::string stellarDataFile; // file containing primary data             [default = ""]
   QMutex*     systemMutex;     // mutex for controlling access to sim data [default = nullptr]
+  accreteVars accreteCtx;      // variables controlling the accrete process
+
 } ctxT, *pctxT;
+
+
+/**********************************************************************************************************************
+ * structure: _orbpro
+ * 
+ * abstract : contains the Keplerian properties of the orbit as well as other physical properties of the object, this
+ *            is instanticated at the same time as the objects are created (in onReadSystem or onGenSystem).  The 
+ *            orbital properties are used to help set the intial position and velocity vectorw.
+*/
+typedef struct _orbpro
+{
+  double   a;             // semi-major axis, AU
+  double   e;             // eccentricity of orbit
+  double   i;             // angle of inclination of orbit, degrees
+  double   L;             // mean longitude, degrees
+  double   w;             // longitude of perihelion, degrees
+  double   W;             // longitude of ascending node, degrees
+  double   t;             // orbital period, days
+  double   o;             // obliquity of ecliptic, degrees
+  double   s;             // linear speed, km/s
+
+  friend std::ostream& operator<<(std::ostream&, const struct _orbpro&);
+} orbitalPropT, * porbitalPropT;
 
 
 /**********************************************************************************************************************
@@ -68,14 +117,14 @@ typedef struct system
   typedef struct obj
   {
     uint32_t            ndx;
-    double_t            mass;
-    std::string         name;
+    double_t            mass;         
+    std::string         name;         
     vector<double_t, 3> curPos;
     vector<double_t, 3> curVel;
     vector<double_t, 3> netForce;
     vector<double_t, 3> newPos;
     vector<double_t, 3> newVel;
-    //std::vector<vector<double_t, 3>> orbit;
+    orbitalPropT        orbProps;
     shiftBuf<vector<double_t, 3>, 45> orbit;
   } objectT, *pobjectT;
 
@@ -89,29 +138,7 @@ typedef struct system
 } systemT, *psystemT;
 
 
-/**********************************************************************************************************************
- * structure: _orbpro
- * 
- * abstract : contains the Keplerian properties of the orbit as well as other physical properties of the object, this
- *            is instanticated at the same time as the objects are created (in onReadSystem or onGenSystem).  The 
- *            orbital properties are used to help set the intial position and velocity vectorw.
-*/
-typedef struct _orbpro
-{
-  double   a;             // semi-major axis, AU
-  double   e;             // eccentricity of orbit
-  double   i;             // angle of inclination of orbit, degrees
-  double   L;             // mean longitude, degrees
-  double   w;             // longitude of perihelion, degrees
-  double   W;             // longitude of ascending node, degrees
-  double   m;             // mass of the planet, earth masses
-  double   t;             // orbital period, days
-  double   o;             // obliquity of ecliptic, degrees
-  double   s;             // linear speed, km/s
-  char     n[10];         // name of the object
 
-  friend std::ostream& operator<<(std::ostream&, const struct _orbpro&);
-} orbitalPropT, * porbitalPropT;
 
 /**********************************************************************************************************************
  * structure: renderInfo

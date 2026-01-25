@@ -13,7 +13,7 @@ class QLineEdit;
 class detailsDlg : public QDialog
 {
 public:
-  detailsDlg(std::vector<orbitalPropT>, psystemT, QWidget* parent = nullptr);
+  detailsDlg(psystemT, QWidget* parent = nullptr);
   ~detailsDlg();
 
   void populateControls();
@@ -38,7 +38,7 @@ private:
 
   QWidget*        m_parent;
   system::starT   m_primary;
-  std::vector<orbitalPropT>*  m_pProps;
+  psystemT        m_system;
 };
 
 #endif

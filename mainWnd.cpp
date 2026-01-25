@@ -463,13 +463,13 @@ void mainWnd::clearOldData()
  **********************************************************************************************************************/
 void mainWnd::onViewSystem()
 {
-  if (m_orbitalProperties.size() == 0)
+  if (m_system == nullptr)
   {
     QMessageBox::information(this, "no system", "A system has not be loaded or generated", QMessageBox::Ok);
   }
   else
   {
-    detailsDlg* dlg = new detailsDlg(m_orbitalProperties, m_system, this);
+    detailsDlg* dlg = new detailsDlg(m_system, this);
     dlg->exec();
 
   }
@@ -614,9 +614,7 @@ void mainWnd::onReadSystem(std::string* inFile)
               double_t circum = 4 * sm * AU2KM* solve2ellipticIntegral(ecc * ecc);      // circumference in km
               double_t speed = circum / period;                                         // speed in km/second
 
-              orbitalPropT    tempProps{ a,e,i,L,w,W,m,t,o,speed };
-              strncpy(tempProps.n, n.c_str(), 9);
-              m_orbitalProperties.push_back(tempProps);
+              temp1->orbProps = orbitalPropT{ a,e,i,L,w,W,t,o,speed };
 
               // assume a heliocentric coordinate system with x-axis parallel to vector to periapsis, z-axis parallel to angular momentum
               if(ecc < 0.4)
@@ -907,16 +905,22 @@ void mainWnd::genPrimaryStar(bool sunlike)
 
              for exocone h(r) = x\tan(\theta)
 
-
-             V_{shell} = 2*f(x_i)(pi x_i^2 - pi x_{x-i}^2) = pi f(x_i)((x_i - x_{i-1})(x_i + x_{i-1})
+             calculation of volumn of exocone:
+             V_{shell} = 2*f(x_i)(pi x_i^2 - pi x_{x-i}^2) = 2*pi f(x_i)((x_i - x_{i-1})(x_i + x_{i-1})
                        = 2 pi f(x_i) \frac{x_i + x_{i-1}}{2} (x_i - x_{i-1})
-                       = 2 pi f(x_i^*)x_i^* dx                                 x^* represent height at midpoint
+                       =  pi f(x_i^*)x_i^* dx                                 x^* represent height at midpoint
 
-            V_{exocone} = 2\int_{r_0}^{r_1} (2 pi x f(x)) dx
-                        = 2\int_{r_0}^{r_1} 2 pi x x\tan(\theta) dx
-                        = 4 \tan(\theta) pi \int_{r_0}^{r_1} x^2 dx
-                        = \frac{4\tan(\theta) pi}{3} [x^3|_{r_0}^{r_1} =\frac{4\tan(\theta) pi}{3}(r_1^3 - r_0^3)
- *
+            V_{exocone} = 2\int_{r_0}^{r_1} ( pi x f(x)) dx                // 2 - accounts for top and bottom triangles
+                        = 2\int_{r_0}^{r_1} pi x x\tan(\theta) dx
+                        = 2 \tan(\theta) pi \int_{r_0}^{r_1} x^2 dx        
+                        = \frac{2\tan(\theta) pi}{3} [x^3|_{r_0}^{r_1} =\frac{4\tan(\theta) pi}{3}(r_1^3 - r_0^3)
+ *  
+ 
+ // TODO : generate conditions for accretion disk (gas/dust amounts and distribution)
+  //        let a = semi-major axis (in AU), \Sigma(a) = surface density at a \Sigma_0 = normalization constant( ~4200 g/cm^3 (Weidenschilling), ~1700 g/cm^3 (Hayashi), or ~50500 g/cm^3 (Desch)
+  //            \beta ~= 1.5
+  //        \Sigma(a) = \Sigma_0(a/ 1 A)^{-\beta}
+  //      : ~60 M_earth of solids ~0.02 M_sol gasses (75% H_2, 25% He)
  * Input   :
  *
  * Returns :
@@ -925,19 +929,24 @@ void mainWnd::genPrimaryStar(bool sunlike)
  *********************************************************************************************************************/
 void mainWnd::genProtoplanetaryDisk()
 {
+  std::random_device   rd;
+  std::mt19937         mt(rd());
+
+  std::uniform_int_distribution<> intDist(1,100);                // distributions for percentages
+
+
   double_t    volumnDisk;
   double_t    dustMass;
-  double_t    dispAngle = 20.0 * DEG2RAD;
+  double_t    gasMass;
+  double_t    dispAngle = m_context.accreteCtx.dispAngle * DEG2RAD;             
 
   // (1) calculate volume of exocone, using shell method.
-  volumnDisk = ((4.0 * PI * tan(dispAngle))/3) * (pow(m_system->primary.osl, 3) - pow(m_system->primary.isl, 3));
+  volumnDisk = ((2.0 * PI * tan(dispAngle))/3) * (pow(m_system->primary.osl, 3) - pow(m_system->primary.isl, 3));
 
-  // (2) calculate mass of dust in exocone sample from log-normal distribution with \mu = 0.01
+  // (2) calculate mass of dust in exocone sample from normal distribution with \mu = 0.01
   // 0.001 to 0.1 M_star, common estimate is 0.01 M_star
   double_t mu = 0.01;
   double_t sigma = 0.05;
-  std::random_device   rd;
-  std::mt19937         mt(rd());
   std::normal_distribution<double_t> ln(mu, sigma);
 
   double_t val = ln(mt);
@@ -945,13 +954,93 @@ void mainWnd::genProtoplanetaryDisk()
   if (val > 0.1) val = 0.1;
   
   dustMass = m_system->primary.mass * val;
+  gasMass = m_context.accreteCtx.gasDustRatio * dustMass; 
+
+
+  // (3) update system structure with known values
+  m_system->method = system::method::MANUAL;
+  m_system->cntObjects = m_context.accreteCtx.cntNuclei;
+
+  // (3) generate partitions of the cloud and density per partitions.
+
 
   CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "disk volume : %.4f AU^3", volumnDisk);
   CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "dust mass in disk: %.4f solar unit", dustMass);
-  
+  CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "gas mass in disk: %.4f solar unit", gasMass);
 
 }
 
+
+void mainWnd::genPlanetaryNucleii()
+{
+  std::random_device   rd;
+  std::mt19937         mt(rd());
+
+  std::uniform_int_distribution<> intDist(1, 100);                          // distributions for percentages in range [1, 100]
+  std::normal_distribution<double_t> normDist(m_context.accreteCtx.initialMass, 0.35 * m_context.accreteCtx.initialMass);
+  std::uniform_real_distribution<> realUDist(0, 360);                       // uniform distribution in range [0,360)
+
+  for (uint32_t ndx = 0; ndx < m_context.accreteCtx.cntNuclei; ndx++)
+  {
+    double_t mass = normDist(mt); 
+
+    char buf[10];
+    sprintf(buf, "%d", ndx);
+    std::string n = std::string("nucleus") + std::string(buf);
+
+    //instantiate new objectT object
+    system::objectT* temp1 = new system::objectT{ ndx, mass, n };       // mass in kg, distances in km
+    
+    // now calculate the orbital properties
+    uint32_t pct = intDist(mt);                                        // generate from a uniform distribution
+    temp1->orbProps.a = m_system->primary.isl + (m_system->primary.osl - m_system->primary.isl) * (static_cast<double>(pct) / 100.0);
+    temp1->orbProps.e = 1.0 - pow((1.0 - intDist(mt) / 100.0), 0.077);
+
+    temp1->orbProps.i = m_context.accreteCtx.dispAngle * (static_cast<double>(intDist(mt))/100.0);
+    temp1->orbProps.w = realUDist(mt);
+    temp1->orbProps.W = realUDist(mt);
+    temp1->orbProps.t = sqrt((4 * PI * PI * pow(temp1->orbProps.a * AU, 3)) / (G * m_system->primary.mass * MSOL));
+    
+    double_t circum = 4 * temp1->orbProps.a * AU2KM * solve2ellipticIntegral(temp1->orbProps.e * temp1->orbProps.e);      // circumference in km
+    double_t speed = circum / temp1->orbProps.t;                                                                          // speed in km/second
+
+
+    // assume a heliocentric coordinate system with x-axis parallel to vector to periapsis, z-axis parallel to angular momentum
+    if (temp1->orbProps.e < 0.4)
+      temp1->curPos.coord(temp1->orbProps.a * (1 - temp1->orbProps.e), 0);         // assume that planet is at periapsis (along the x axis)
+    else
+      temp1->curPos.coord(temp1->orbProps.a, 0);                                   // high eccentricity orbits start at apiapsis
+    temp1->curPos.coord(0.0l, 1);
+    temp1->curPos.coord(0.0l, 2);
+
+    temp1->curVel.coord(0.0l, 0);                                                  // set components of the velocity vector (parallel to y-axis)
+    temp1->curVel.coord(speed, 1);
+    temp1->curVel.coord(0.0l, 2);
+
+    /*
+     TODO : rotate both position and velocity vector by argument of periapsis about z-axis
+     TODO : rotate both position and velocity vector by inclination about y-axis
+     TODO : rotate both position and velocity vector by RAAN about z-axis
+
+        | X |   |cos W -sin W  0 | | cos I  0  sin I | | cos w -sin w  0 || x |
+        | Y | = |sin W  cos W  0 | |  0     1   0    | | sin w  cos w  0 || y |
+        | Z |   | 0      0     1 | |-sin I  0  cos I | |  0      0     1 || z |
+    */
+
+    m_system->objects.push_back(temp1);
+  }  
+  
+  for (uint32_t ndx = 1; ndx < m_context.accreteCtx.cntNuclei; ndx++)
+  {
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    name                       : %s", m_system->objects.at(ndx)->name.c_str());
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    semi-major, AU             : %.4f", m_system->objects.at(ndx)->orbProps.a);
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    mass,kg                    : %.4E", m_system->objects.at(ndx)->mass*MSOL);
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    inclination, deg           : %.2f", m_system->objects.at(ndx)->orbProps.i);
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    eccentricity               : %.4f", m_system->objects.at(ndx)->orbProps.e);
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    longitude of ascending node: %.2f", m_system->objects.at(ndx)->orbProps.W);
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "    argument of periapsis      : %.2f", m_system->objects.at(ndx)->orbProps.w);
+  }
+}
 
 
 /***********************************************************************************************************************
@@ -1007,14 +1096,10 @@ void mainWnd::onGenSystem()
   genProtoplanetaryDisk();
 
   // (3) genrate protoplanet nucleii
+  genPlanetaryNucleii();
 
-  // TODO : generate conditions for accretion disk (gas/dust amounts and distribution)
-  //        let a = semi-major axis (in AU), \Sigma(a) = surface density at a \Sigma_0 = normalization constant( ~4200 g/cm^3 (Weidenschilling), ~1700 g/cm^3 (Hayashi), or ~50500 g/cm^3 (Desch)
-  //            \beta ~= 1.5
-  //        \Sigma(a) = \Sigma_0(a/ 1 A)^{-\beta}
-  //      : ~60 M_earth of solids ~0.02 M_sol gasses (75% H_2, 25% He)
-  // TODO : generate random number of nucleii and set period to keplarian period, orbits can be highly eccentric and unstable mass ~0.1M_earth
-  
+
+  // 
   // TODO : set deltaT to 100000years
   // TODO : set duration = 3000000years
   // TODO : set maxStep = duration/deltaT
@@ -1281,6 +1366,10 @@ void mainWnd::updateGuiThread(uint64_t step, prenderInfoT pinfos)
  **********************************************************************************************************************/
 void mainWnd::updateDisplay(prenderInfoT pinfo)
 {    
+  // if m_system has not be instantiated yet, just return
+  if (nullptr == m_system) return;
+
+
   m_context.systemMutex->lock();
   if (nullptr != pinfo)
   {
@@ -1440,6 +1529,4 @@ void mainWnd::cleanUpSystem()
     delete m_system;
     m_system = nullptr;
   }
-
-  m_orbitalProperties.clear();
 }

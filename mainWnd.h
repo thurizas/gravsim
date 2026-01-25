@@ -61,6 +61,7 @@ private:
   bool readStellarFile();
   void genPrimaryStar(bool sunlike = false);
   void genProtoplanetaryDisk();
+  void genPlanetaryNucleii();
 
   QAction* m_fileExit;
   QAction* m_fileExportPrimary;
@@ -96,7 +97,7 @@ private:
   QLabel*        m_time = nullptr;
   //QThread*       m_simWorkerThread = nullptr;
   //simWorker*     m_simWorker = nullptr;
-  std::vector<orbitalPropT> m_orbitalProperties;
+  //std::vector<orbitalPropT> m_orbitalProperties;
 };
 
 #endif
