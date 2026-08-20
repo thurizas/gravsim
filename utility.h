@@ -10,6 +10,8 @@ void     calcHZ(double_t mass, double_t* minHZ, double_t* maxHZ);
 double_t calcISL(double_t mass);
 double_t calcFrostLine(double_t mass);
 
+double_t exoconeVolume(double_t, double_t, double_t);
+
 
 
 #endif

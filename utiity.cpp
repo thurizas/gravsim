@@ -157,3 +157,46 @@ double_t calcFrostLine(double_t mass)
   return fl;
 }
 
+/**********************************************************************************************************************
+ * Function:   
+ *
+ * Abstract:                         volume of shell-slice = f(x^*)(\pi r_o^2 - \pi r_i^2)     base area (circular annali) time height
+ *                                                         = f(x^*)\pi(r_o - r_i)(r_o + r_i)
+ *                                                         = 2f(x^*)\frac{r_o + r_i}{2}(r_o - r_i)
+ *                           
+ *                                       note: r_o - r_i = \Delta x and \frac{r_o + r_i}{2} \appro x^* thus
+ *                                           
+ *                                   volume of shell-slice \appro 2\pif(x^*)x^* \Delta x = \int_{r_i}^{r_o} 2\pi f(x) x dx
+ * 
+ *             shell:
+ *     /| -------------------------  for the exocone, f(x) = x \tan(\theta) where \theta is the vertex angle
+ *    / |                         |                       
+ *   /  |                         |  volume of cone is V = 2 \pi \tan(\theta) \int_{r_o}^{r_i} x^2 dx  (upper half)                      
+ *  /   |                         |                      = \frac{2\pi \tan(theta}{3} x^3|_{x_o}^{x_i}
+ * /    | ______                  |                      = \frac{2\pi \tan(theta}{3}(x_o^3 - x_i^3)
+ * |    |   |                     |                      = \frac{4\pi \tan(theta}{3}(x_o^3 - x_i^3)    (upper & lower parts)
+ * |    |   |                     |   r-o\tan(\theta)
+ * |    |   |    r_i\tan(\theta)  |
+ * |    |   |                     |
+ * |    |   |                     |  volume of shell = \pi \int_{r_i}^{r_o} (r_i\tan(\theta) + r_o\tan(\theta))dr
+ * |    |   |                     |                  = \pi(r_i\tan(\theta) + r_o\tan(\theta))*\frac{1}{2}r^2 |_r_i^r_o = \pi(r_i\tan(\theta) + r_o\tan(\theta)(r_o^2 -r_i^2)
+ * +----+ -------------------------                   
+ *r_i  r_o     
+ *
+ *                                   funstrum
+ * Input   : angle -- [in] the vertex angle of the exocone, in degrees
+ *           inner -- [in] the inner radius of the section, in AU
+ *           outer -- [in] the outer radius of the section, in AU
+ *
+ * Returns : volume of the slice (a trapezoid rotated around the z-axis) in AU^3
+ *
+ * Written : Jan 2026 (gkhuber) 
+ *************************************************************************************************/
+double_t exoconeVolume(double_t angle, double_t inner, double_t outer)
+{
+  double_t    dispAngle = angle * DEG2RAD;                  // convert degrees to radians
+
+  double_t volumn = ((4.0*PI * tan(dispAngle))/3.0) * (pow(outer, 3) - pow(inner, 3));
+
+  return volumn;
+}

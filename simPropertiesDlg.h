@@ -49,6 +49,7 @@ private:
   QLineEdit* m_edtCntNucleii = nullptr;
   QLineEdit* m_edtInitialMass = nullptr;
   QLineEdit* m_edtAlpha = nullptr;
+  QLineEdit* m_edtDensityConstant = nullptr;
   QLineEdit* m_edtPowerExp = nullptr;
 
   bool         m_bNewFile = false;

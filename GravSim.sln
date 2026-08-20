@@ -10,7 +10,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GravSim", "GravSim.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libprocgen", "libprocgen\libprocgen.vcxproj", "{B340FAC3-A1DE-450D-BC8D-32F926983421}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libprocgen_test", "libprocgen\libprocgen_test\libprocgen_test.vcxproj", "{EB1849C0-1466-4B16-A11E-316F027F2BD6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testHarness", "testHarness\testHarness\testHarness.vcxproj", "{4278DEE3-7C32-4E84-885B-3AED445B8DAE}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B340FAC3-A1DE-450D-BC8D-32F926983421} = {B340FAC3-A1DE-450D-BC8D-32F926983421}
 	EndProjectSection
@@ -29,10 +29,10 @@ Global
 		{B340FAC3-A1DE-450D-BC8D-32F926983421}.Debug|x64.Build.0 = Debug|x64
 		{B340FAC3-A1DE-450D-BC8D-32F926983421}.Release|x64.ActiveCfg = Release|x64
 		{B340FAC3-A1DE-450D-BC8D-32F926983421}.Release|x64.Build.0 = Release|x64
-		{EB1849C0-1466-4B16-A11E-316F027F2BD6}.Debug|x64.ActiveCfg = Debug|x64
-		{EB1849C0-1466-4B16-A11E-316F027F2BD6}.Debug|x64.Build.0 = Debug|x64
-		{EB1849C0-1466-4B16-A11E-316F027F2BD6}.Release|x64.ActiveCfg = Release|x64
-		{EB1849C0-1466-4B16-A11E-316F027F2BD6}.Release|x64.Build.0 = Release|x64
+		{4278DEE3-7C32-4E84-885B-3AED445B8DAE}.Debug|x64.ActiveCfg = Debug|x64
+		{4278DEE3-7C32-4E84-885B-3AED445B8DAE}.Debug|x64.Build.0 = Debug|x64
+		{4278DEE3-7C32-4E84-885B-3AED445B8DAE}.Release|x64.ActiveCfg = Release|x64
+		{4278DEE3-7C32-4E84-885B-3AED445B8DAE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

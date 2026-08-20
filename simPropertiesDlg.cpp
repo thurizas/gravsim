@@ -110,6 +110,7 @@ void simPropertiesDlg::setupUI()
   m_edtCntNucleii  = new QLineEdit(); if (m_pcontext != nullptr) m_edtCntNucleii->setText(QString("%1").arg(m_pcontext->accreteCtx.cntNuclei));
   m_edtInitialMass = new QLineEdit(); if (m_pcontext != nullptr) m_edtInitialMass->setText(QString("%1").arg(m_pcontext->accreteCtx.initialMass));
   m_edtAlpha       = new QLineEdit(); if (m_pcontext != nullptr) m_edtAlpha->setText(QString("%1").arg(m_pcontext->accreteCtx.alpha));
+  m_edtDensityConstant = new QLineEdit(); if (m_pcontext != nullptr) m_edtDensityConstant->setText(QString("%1").arg(m_pcontext->accreteCtx.A));
   m_edtPowerExp    = new QLineEdit(); if (m_pcontext != nullptr) m_edtPowerExp->setText(QString("%1").arg(m_pcontext->accreteCtx.n));
 
   accreteFormLayout->addRow("dispersion angle (degrees)           :", m_edtDisp);
@@ -119,6 +120,7 @@ void simPropertiesDlg::setupUI()
   accreteFormLayout->addRow("number of initial nucleii present    :", m_edtCntNucleii);
   accreteFormLayout->addRow("initial mass of nucleii (solar mass) :", m_edtInitialMass);
   accreteFormLayout->addRow("alpha                                :", m_edtAlpha);
+  accreteFormLayout->addRow("density constant (solar mass/AU^3)   :", m_edtDensityConstant);
   accreteFormLayout->addRow("inverse power law exponent (Dole's n):", m_edtPowerExp);
   
   QVBoxLayout*  mainLayout = new QVBoxLayout(this);
@@ -172,6 +174,7 @@ void simPropertiesDlg::onOK()
   m_pcontext->accreteCtx.cntNuclei = (m_edtCntNucleii->text()).toInt();
   m_pcontext->accreteCtx.initialMass = (m_edtInitialMass->text()).toDouble();
   m_pcontext->accreteCtx.alpha = (m_edtAlpha->text()).toDouble();
+  m_pcontext->accreteCtx.A = (m_edtDensityConstant->text()).toDouble();
   m_pcontext->accreteCtx.n = (m_edtPowerExp->text()).toDouble();
 
   QDialog::accept();              // call base-class accept funtion

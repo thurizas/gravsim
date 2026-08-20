@@ -903,19 +903,6 @@ void mainWnd::genPrimaryStar(bool sunlike)
              n = 3
              K = 50
 
-             for exocone h(r) = x\tan(\theta)
-
-             calculation of volumn of exocone:
-             V_{shell} = 2*f(x_i)(pi x_i^2 - pi x_{x-i}^2) = 2*pi f(x_i)((x_i - x_{i-1})(x_i + x_{i-1})
-                       = 2 pi f(x_i) \frac{x_i + x_{i-1}}{2} (x_i - x_{i-1})
-                       =  pi f(x_i^*)x_i^* dx                                 x^* represent height at midpoint
-
-            V_{exocone} = 2\int_{r_0}^{r_1} ( pi x f(x)) dx                // 2 - accounts for top and bottom triangles
-                        = 2\int_{r_0}^{r_1} pi x x\tan(\theta) dx
-                        = 2 \tan(\theta) pi \int_{r_0}^{r_1} x^2 dx        
-                        = \frac{2\tan(\theta) pi}{3} [x^3|_{r_0}^{r_1} =\frac{4\tan(\theta) pi}{3}(r_1^3 - r_0^3)
- *  
- 
  // TODO : generate conditions for accretion disk (gas/dust amounts and distribution)
   //        let a = semi-major axis (in AU), \Sigma(a) = surface density at a \Sigma_0 = normalization constant( ~4200 g/cm^3 (Weidenschilling), ~1700 g/cm^3 (Hayashi), or ~50500 g/cm^3 (Desch)
   //            \beta ~= 1.5
@@ -934,14 +921,13 @@ void mainWnd::genProtoplanetaryDisk()
 
   std::uniform_int_distribution<> intDist(1,100);                // distributions for percentages
 
-
   double_t    volumnDisk;
   double_t    dustMass;
-  double_t    gasMass;
-  double_t    dispAngle = m_context.accreteCtx.dispAngle * DEG2RAD;             
+  double_t    gasMass;        
+
 
   // (1) calculate volume of exocone, using shell method.
-  volumnDisk = ((2.0 * PI * tan(dispAngle))/3) * (pow(m_system->primary.osl, 3) - pow(m_system->primary.isl, 3));
+  volumnDisk = exoconeVolume(m_context.accreteCtx.dispAngle, m_system->primary.isl, m_system->primary.osl);
 
   // (2) calculate mass of dust in exocone sample from normal distribution with \mu = 0.01
   // 0.001 to 0.1 M_star, common estimate is 0.01 M_star
@@ -956,18 +942,42 @@ void mainWnd::genProtoplanetaryDisk()
   dustMass = m_system->primary.mass * val;
   gasMass = m_context.accreteCtx.gasDustRatio * dustMass; 
 
-
   // (3) update system structure with known values
   m_system->method = system::method::MANUAL;
   m_system->cntObjects = m_context.accreteCtx.cntNuclei;
 
   // (3) generate partitions of the cloud and density per partitions.
+  int cntPartitions = m_context.accreteCtx.cntBands;
+
+  double_t span = m_system->primary.osl - m_system->primary.isl;
+  double_t deltaR = span / cntPartitions;
+
+  for (uint32_t ndx = 0; ndx < cntPartitions; ndx++)
+  {
+    system::pbandT temp = new system::bandT;
+    temp->ndx = ndx;
+    temp->innerR = m_system->primary.isl + ndx * deltaR;
+    temp->outerR = temp->innerR + deltaR;
+
+    temp->volume = exoconeVolume(m_context.accreteCtx.dispAngle, temp->innerR, temp->outerR);
+    // calculate density of dust in each band, \rho = A exp(-\alpha r^{\frac{1}{n}}
+    float rho = m_context.accreteCtx.A * exp(-m_context.accreteCtx.alpha * pow(((temp->outerR + temp->innerR) / 2.0), 1.0 / m_context.accreteCtx.n));
+    
+    temp->rhoDust = rho;
+    temp->rhoGas = m_context.accreteCtx.gasDustRatio * temp->rhoDust;
+   
+    m_system->bands.push_back(temp);
+  }
+
 
 
   CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "disk volume : %.4f AU^3", volumnDisk);
   CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "dust mass in disk: %.4f solar unit", dustMass);
   CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "gas mass in disk: %.4f solar unit", gasMass);
-
+  for (system::bandT* b : m_system->bands)
+  {
+    CLogger::getInstance()->outMsg(cmdLine, CLogger::level::DEBUG, "   partition [%d] [%.4f, %.4f] densities: [%.4E, %.4E]",b->ndx, b->innerR, b->outerR, b->rhoDust, b->rhoGas);
+  }
 }
 
 
@@ -1106,6 +1116,7 @@ void mainWnd::onGenSystem()
   // TODO : do step = 0 to maxStep
   // TODO :     CoreAccretion (planetessiamls sweep out annulus of ~hill radius)
   // TODO :     GasAccretion   (like core accretion by happens when planets mass > critical mass)
+  // TODO :     Equilibrate Dust/Gas
   // TODO :     PebbleAccretion (radially directed flux ~100M_earth/100Myr, small 1mm to 1cm tracked per annulii)
   // TODO :     PlanetaryMigration
   // TODO :     Collisions

@@ -24,6 +24,8 @@ int main(int argc, char** argv)
 
 // default values for the context
   ctxT context{ 0, 24 * 3600, 400, "days", true, system::method::UNKNOWN, system::earthlike::INDETERMINATE, "", "", nullptr};
+// default values for the accretion process
+  context.accreteCtx = accreteVars{ 20.0, 0.001, 0.01, 0.1, 50.0, 30, 20, 10E-15, 5.0, 3.0, 1.5E-3 };
   
   while (-1 != (choice = getopt(argc, argv, "f:S:dhv")))
   {

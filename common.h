@@ -34,6 +34,7 @@ typedef struct accrete_variables
   double_t     initialMass;  // initial mass of each planetary nuclei, solar mass [default = 10E-15]
   double_t     alpha;        // [default = 5.0]
   double_t     n;            // [default = 3.0]
+  double_t     A;            // density constant [default = 1.5E-3 solar mass/AU^3]
 
 } accreteVars, *paccreteVars;
 
@@ -128,10 +129,21 @@ typedef struct system
     shiftBuf<vector<double_t, 3>, 45> orbit;
   } objectT, *pobjectT;
 
+  typedef struct band
+  {
+    uint32_t            ndx;
+    double_t            innerR;   // inner radius of band, AU
+    double_t            outerR;   // outer radius of band, AU
+    double_t            volume;   // volume of band, AU^3
+    double_t            rhoDust;  // density of dust in band, kg
+    double_t            rhoGas;   // mass of gas in band, kg
+  } bandT, *pbandT;
+
   uint8_t               method;
   uint32_t              cntObjects;
   uint64_t              timeStep;
   std::vector<objectT*> objects;
+  std::vector<bandT*>   bands;
   starT                 primary;
 
   friend std::ostream& operator<<(std::ostream&, const struct system&);
