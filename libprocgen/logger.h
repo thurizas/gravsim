@@ -41,6 +41,12 @@
 #include <cstdint>
 #include <map>
 #include <functional>
+#include <version>
+
+#if _MSVC_LANG == 202002L             // test for compiler supporting c++20
+    #include <format>
+    #include <utility>
+#endif
 
 // predefined output identifiers
 DLLExport const uint32_t cmdLine = 0;
@@ -66,7 +72,30 @@ public:
   static void     delInstance();
 
 
-  void     outMsg(int, int, const char*, ...);
+  void     outMsg(int, int, const char*, ...); 
+
+#if _MSVC_LANG == 202002L             // test for compiler supporting c++20 
+  template<class... Args>
+  void outMsg2(int nWhich, int level, std::format_string<Args...> fmt, Args&&... args) 
+  {
+    mapType::iterator iter = m_mapCallbacks.find(nWhich);
+    if ((iter != m_mapCallbacks.end()) && ((*iter).second)) 
+    {
+      if (m_level <= level) 
+      {
+        // 1. Create a char buffer (std::vformat_to works naturally with char)
+        std::string buf;
+
+        // 2. Use vformat_to and make_format_args to handle the runtime format string
+        std::vformat_to(std::back_inserter(buf), fmt.get(), std::make_format_args(args...));
+
+        // 3. Pass the raw pointer (char*) to your callback function
+        (*iter).second(level, const_cast<char*>(buf.c_str()));
+      }
+    }
+  }
+#endif
+  
   void     regOutDevice(int, fnct);
 
 private:
@@ -75,7 +104,10 @@ private:
 
     int             m_level;
     static CLogger* m_pThis;
+#pragma warning(push)
+#pragma warning(disable: 4251)
     mapType         m_mapCallbacks;  
+#pragma warning(pop)
 };
 
 #endif

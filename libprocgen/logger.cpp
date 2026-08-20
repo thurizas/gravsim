@@ -69,6 +69,26 @@ void CLogger::outMsg(int nWhich, int level, const char* fmt, ...)
   }
 }
 
+//#if _MSVC_LANG ==202002L
+//template<class... Args>
+//void CLogger::outMsg2(int nWhich, int level, std::format_string<Args...> fmt, Args&&... args)
+//{
+//  mapType::iterator  iter = m_mapCallbacks.find(nWhich);
+//
+//  if ((iter != m_mapCallbacks.end()) && ((*iter).second)) // did we find the entry, and is it a valid callback.
+//  {
+//    if (m_level <= level)          // only do work if level of message is greater than or equal to report level
+//    {
+//      std::vector<uint8_t> buf;
+//      std::format_to(std::back_inserter<buf>, fmt, std::format<Args>(args)...);
+//      //std::cout << std::format(fmt, std::format<Args>(args)...) << "\n";
+//
+//      (*iter).second(level, buf);
+//    }
+//  }
+//}
+//#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // privae functions
